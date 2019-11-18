@@ -32,6 +32,8 @@ class ReadCachingCli : public Cli {
       const shared_ptr<Cli>& _cli,
       const shared_ptr<CliCache>& _cache);
 
+  ~ReadCachingCli() override;
+
   static shared_ptr<CliCache> createCache();
   Future<string> executeAndRead(const Command& cmd) override;
   Future<string> execute(const Command& cmd) override;

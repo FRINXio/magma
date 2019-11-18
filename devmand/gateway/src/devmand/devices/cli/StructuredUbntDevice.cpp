@@ -280,10 +280,12 @@ static shared_ptr<Nis> parseNetworks(Channel& channel) {
 unique_ptr<devices::Device> StructuredUbntDevice::createDevice(
     Application& app,
     const cartography::DeviceConfig& deviceConfig) {
-  IoConfigurationBuilder ioConfigurationBuilder(deviceConfig);
+  IoConfigurationBuilder ioConfigurationBuilder(
+      deviceConfig);
   auto cmdCache = ReadCachingCli::createCache();
   const std::shared_ptr<Channel>& channel = std::make_shared<Channel>(
-      deviceConfig.id, ioConfigurationBuilder.getIo(cmdCache));
+      deviceConfig.id,
+      ioConfigurationBuilder.createAll(cmdCache));
 
   return unique_ptr<StructuredUbntDevice>(
       new StructuredUbntDevice(app, deviceConfig.id, channel, cmdCache));

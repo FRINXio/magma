@@ -17,10 +17,15 @@ namespace devmand::channels::cli {
 using namespace std;
 using namespace folly;
 
+/*
+ * TODO: throw exception when queue is full
+ */
 class QueuedCli : public Cli {
  private:
   string id;
   shared_ptr<Cli> cli;
+
+  shared_ptr<Executor> parentExecutor;
 
   Executor::KeepAlive<SerialExecutor>
       serialExecutorKeepAlive; // maintain consumer thread
@@ -36,27 +41,34 @@ class QueuedCli : public Cli {
    * Unbounded multi producer single consumer queue where consumer is not
    * blocked on dequeue.
    */
-  UnboundedQueue<QueueEntry, false, true, false> queue;
-  bool isProcessing = false; // only accessed from consumer thread
+  UnboundedQueue<QueueEntry, false, true, false>
+      queue; // TODO: investigate priority queue for keepalive commands
 
- public:
-  QueuedCli(
-      string _id,
-      shared_ptr<Cli> _cli,
-      const shared_ptr<Executor>& _parentExecutor);
-  QueuedCli() = delete;
-  ~QueuedCli() override;
-  QueuedCli(const QueuedCli&) = delete;
+  atomic<bool> isProcessing;
 
-  Future<string> executeAndRead(const Command& cmd) override;
-  Future<string> execute(const Command& cmd) override;
+  atomic<bool> shutdown;
 
- private:
   Future<string> executeSomething(
       const Command& cmd,
       const string& prefix,
       function<Future<string>()> innerFunc);
 
   void triggerDequeue();
+
+ public:
+  QueuedCli(
+      string _id,
+      shared_ptr<Cli> _cli,
+      shared_ptr<Executor> _parentExecutor);
+
+  QueuedCli() = delete;
+
+  QueuedCli(const QueuedCli&) = delete;
+
+  ~QueuedCli() override;
+
+  Future<string> executeAndRead(const Command& cmd) override;
+
+  Future<string> execute(const Command& cmd) override;
 };
 } // namespace devmand::channels::cli

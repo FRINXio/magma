@@ -15,16 +15,32 @@ using namespace folly;
 QueuedCli::QueuedCli(
     string _id,
     shared_ptr<Cli> _cli,
-    const shared_ptr<Executor>& _parentExecutor)
+    shared_ptr<Executor> _parentExecutor)
     : id(_id),
       cli(_cli),
+      parentExecutor(_parentExecutor),
       serialExecutorKeepAlive(SerialExecutor::create(
-          Executor::getKeepAliveToken(_parentExecutor.get()))) {}
+          Executor::getKeepAliveToken(_parentExecutor.get()))) {
+  isProcessing = false;
+  shutdown = false;
+}
 
 QueuedCli::~QueuedCli() {
-  // Execute a dummy task to make sure all running tasks have finished and that
-  // we can safely close this instance
-  via(serialExecutorKeepAlive, []() {}).get();
+  MLOG(MDEBUG) << "[" << id << "] "
+               << "~QCli";
+  shutdown = true;
+  isProcessing = true;
+  MLOG(MDEBUG) << "[" << id << "] "
+               << "~QCli: dequeuing " << queue.size() << " items";
+  QueueEntry queueEntry;
+  while (queue.try_dequeue(queueEntry)) {
+    queueEntry.promise->setException(runtime_error("QCli: Shutting down"));
+  }
+  serialExecutorKeepAlive = nullptr;
+  parentExecutor = nullptr;
+  cli = nullptr;
+  MLOG(MDEBUG) << "[" << id << "] "
+               << "~QCli done";
 }
 
 Future<string> QueuedCli::executeAndRead(const Command& cmd) {
@@ -65,7 +81,8 @@ Future<string> QueuedCli::executeSomething(
     const Command& cmd,
     const string& prefix,
     function<Future<string>()> innerFunc) {
-  MLOG(MDEBUG) << "[" << id << "] " << prefix << "('" << cmd << "') called";
+  MLOG(MDEBUG) << "[" << id << "] " << prefix << " adding to queue ('" << cmd
+               << "')";
   shared_ptr<Promise<string>> promise = std::make_shared<Promise<string>>();
   QueueEntry queueEntry;
   queueEntry.obtainFutureFromCli = move(innerFunc);
@@ -73,8 +90,10 @@ Future<string> QueuedCli::executeSomething(
   queueEntry.command = cmd.toString();
   queueEntry.loggingPrefix = prefix;
   queue.enqueue(move(queueEntry));
-  triggerDequeue();
-  return promise->getFuture(); // TODO: check lifetime
+  if (!isProcessing) {
+    triggerDequeue();
+  }
+  return promise->getFuture();
 }
 
 /*
@@ -82,29 +101,58 @@ Future<string> QueuedCli::executeSomething(
  * It is safe to call this method anytime, it is thread safe.
  */
 void QueuedCli::triggerDequeue() {
+  if (shutdown)
+    return;
   // switch to consumer thread
   via(serialExecutorKeepAlive, [=]() {
     MLOG(MDEBUG) << "[" << id << "] "
-                 << "isProcessing:" << this->isProcessing;
+                 << "QCli.isProcessing:" << this->isProcessing
+                 << ", queue size:" << queue.size();
     // do nothing if still waiting for remote device to respond
     if (!this->isProcessing) {
       QueueEntry queueEntry;
       if (queue.try_dequeue(queueEntry)) {
         isProcessing = true;
         Future<string> cliFuture = queueEntry.obtainFutureFromCli();
-        MLOG(MDEBUG) << "[" << id << "] " << queueEntry.loggingPrefix << "('"
-                     << queueEntry.command
-                     << "') dequeued and cli future obtained";
-        move(cliFuture).then(
-            serialExecutorKeepAlive, [this, queueEntry](std::string result) {
-              // after cliFuture completes, finish processing on consumer thread
-              MLOG(MDEBUG) << "[" << id << "] " << queueEntry.loggingPrefix
-                           << "('" << queueEntry.command
-                           << "') finished with result '" << result << "'";
-              queueEntry.promise->setValue(result);
-              isProcessing = false;
-              triggerDequeue();
-            });
+        MLOG(MDEBUG) << "[" << id << "] " << queueEntry.loggingPrefix
+                     << " dequeued ('" << queueEntry.command
+                     << "') and cli future obtained";
+        if (shutdown)
+          return;
+        move(cliFuture)
+            .via(serialExecutorKeepAlive)
+            .then(
+                serialExecutorKeepAlive,
+                [this, queueEntry](std::string result) -> Future<Unit> {
+                  // after cliFuture completes, finish processing on consumer
+                  // thread
+                  MLOG(MDEBUG) << "[" << id << "] " << queueEntry.loggingPrefix
+                               << " finished ('" << queueEntry.command
+                               << "') with result '" << result << "'";
+                  isProcessing = false;
+                  queueEntry.promise->setValue(result);
+                  triggerDequeue();
+                  return Unit{};
+                })
+            .thenError(
+                folly::tag_t<std::exception>{},
+                [this, queueEntry](std::exception const& e) -> Future<Unit> {
+                  MLOG(MDEBUG) << "[" << id << "] " << queueEntry.loggingPrefix
+                               << " failed ('" << queueEntry.command
+                               << "')  with exception '" << e.what() << "'";
+                  if (!shutdown) {
+                    isProcessing = false;
+                  }
+                  auto cpException = runtime_error(e.what());
+                  MLOG(MDEBUG) << "[" << id << "] " << queueEntry.loggingPrefix
+                               << " copied exception " << cpException.what();
+                  // TODO: exception type is not preserved,
+                  // queueEntry.promise->setException(e) results in
+                  // std::exception
+                  queueEntry.promise->setException(cpException);
+                  triggerDequeue();
+                  return Unit{};
+                });
       }
     }
   });

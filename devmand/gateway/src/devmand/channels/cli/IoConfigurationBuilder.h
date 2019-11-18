@@ -11,21 +11,39 @@
 #include <devmand/channels/cli/Cli.h>
 #include <devmand/channels/cli/CliFlavour.h>
 #include <devmand/channels/cli/ReadCachingCli.h>
+#include <folly/executors/IOThreadPoolExecutor.h>
+#include <folly/futures/ThreadWheelTimekeeper.h>
+
+namespace devmand::channels::cli {
 
 using devmand::cartography::DeviceConfig;
 using devmand::channels::cli::Cli;
 using devmand::channels::cli::CliFlavour;
-using std::shared_ptr;
+using namespace std;
 
-namespace devmand::channels::cli {
+using folly::IOThreadPoolExecutor;
+
 class IoConfigurationBuilder {
- private:
-  DeviceConfig deviceConfig;
 
  public:
   IoConfigurationBuilder(const DeviceConfig& deviceConfig);
 
+  shared_ptr<Cli> createAll(
+      shared_ptr<CliCache> commandCache);
+
+  shared_ptr<Cli> createAll(
+      function<shared_ptr<Cli>(shared_ptr<folly::IOThreadPoolExecutor>)>
+          underlyingCliLayerFactory,
+      shared_ptr<CliCache> commandCache); // visible for testing
+
+ private:
+    DeviceConfig deviceConfig;
+  shared_ptr<Cli> createSSH(
+      shared_ptr<folly::IOThreadPoolExecutor> executor);
+
   shared_ptr<Cli> getIo(
+      shared_ptr<Cli> underlyingCliLayer,
+      shared_ptr<folly::ThreadWheelTimekeeper> timekeeper,
       shared_ptr<CliCache> commandCache = ReadCachingCli::createCache());
 };
 } // namespace devmand::channels::cli

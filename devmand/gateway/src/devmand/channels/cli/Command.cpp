@@ -14,11 +14,12 @@ namespace cli {
 using std::string;
 using std::vector;
 
-Command::Command(const std::string _command) : command(_command) {}
+Command::Command(const std::string _command, bool skipCache)
+    : command(_command), skipCache_(skipCache) {}
 
 // Factory methods
-Command Command::makeReadCommand(const std::string& cmd) {
-  return Command(cmd);
+Command Command::makeReadCommand(const std::string& cmd, bool skipCache) {
+  return Command(cmd, skipCache);
 }
 
 static const char DELIMITER = '\n';

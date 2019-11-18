@@ -122,7 +122,11 @@ add_library(devman_channel_cli
   ${PROJECT_SOURCE_DIR}/src/devmand/channels/cli/Spd2Glog.cpp
   ${PROJECT_SOURCE_DIR}/src/devmand/channels/cli/IoConfigurationBuilder.cpp
   ${PROJECT_SOURCE_DIR}/src/devmand/channels/cli/ReadCachingCli.cpp
-  ${PROJECT_SOURCE_DIR}/src/devmand/channels/cli/SshSocketReader.cpp)
+  ${PROJECT_SOURCE_DIR}/src/devmand/channels/cli/SshSocketReader.cpp
+  ${PROJECT_SOURCE_DIR}/src/devmand/channels/cli/TimeoutTrackingCli.cpp
+  ${PROJECT_SOURCE_DIR}/src/devmand/channels/cli/KeepaliveCli.cpp
+  ${PROJECT_SOURCE_DIR}/src/devmand/channels/cli/ReconnectingCli.cpp
+        )
 
 target_link_libraries(devman_channel_cli
   devman)

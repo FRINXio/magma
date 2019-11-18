@@ -22,19 +22,20 @@ using CliCache = Synchronized<EvictingCacheMap<string, string>>;
 Future<string> devmand::channels::cli::ReadCachingCli::executeAndRead(
     const Command& cmd) {
   const string command = cmd.toString();
+  if (!cmd.skipCache()) {
+    string cachedResult = cache->withWLock([=](auto& cache_) {
+      if (cache_.exists(command)) {
+        MLOG(MDEBUG) << "[" << id << "] "
+                     << "Found command: " << command << " in cache";
+        return cache_.get(command);
+      } else {
+        return string(""); // FIXME: optional
+      }
+    });
 
-  string cachedResult = cache->withWLock([=](auto& cache_) {
-    if (cache_.exists(command)) {
-      MLOG(MDEBUG) << "[" << id << "] "
-                   << "Found command: " << command << " in cache";
-      return cache_.get(command);
-    } else {
-      return string("");
+    if (!cachedResult.empty()) {
+      return Future<string>(cachedResult);
     }
-  });
-
-  if (!cachedResult.empty()) {
-    return Future<string>(cachedResult);
   }
 
   return cli->executeAndRead(cmd).thenValue([=](string output) {
@@ -52,6 +53,11 @@ devmand::channels::cli::ReadCachingCli::ReadCachingCli(
 Future<string> devmand::channels::cli::ReadCachingCli::execute(
     const Command& cmd) {
   return cli->execute(cmd);
+}
+
+devmand::channels::cli::ReadCachingCli::~ReadCachingCli() {
+  MLOG(MDEBUG) << "[" << id << "] "
+               << "~RCcli";
 }
 
 shared_ptr<CliCache> devmand::channels::cli::ReadCachingCli::createCache() {
