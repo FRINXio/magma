@@ -90,8 +90,7 @@ target_link_libraries(devman
   tacopie
   glog
   gflags
-  iberty
-  unwind)
+  iberty)
 
 add_library(devman_channel_snmp
   ${PROJECT_SOURCE_DIR}/src/devmand/channels/snmp/Channel.cpp
@@ -163,8 +162,7 @@ target_link_libraries(devman_service_magma
   tacopie
   glog
   gflags
-  iberty
-  unwind)
+  iberty)
 
 add_executable(devmand
   ${PROJECT_SOURCE_DIR}/src/devmand/main.cpp)
