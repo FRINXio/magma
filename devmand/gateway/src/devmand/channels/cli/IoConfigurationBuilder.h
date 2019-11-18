@@ -24,12 +24,10 @@ using namespace std;
 using folly::IOThreadPoolExecutor;
 
 class IoConfigurationBuilder {
-
  public:
   IoConfigurationBuilder(const DeviceConfig& deviceConfig);
 
-  shared_ptr<Cli> createAll(
-      shared_ptr<CliCache> commandCache);
+  shared_ptr<Cli> createAll(shared_ptr<CliCache> commandCache);
 
   shared_ptr<Cli> createAll(
       function<shared_ptr<Cli>(shared_ptr<folly::IOThreadPoolExecutor>)>
@@ -37,9 +35,8 @@ class IoConfigurationBuilder {
       shared_ptr<CliCache> commandCache); // visible for testing
 
  private:
-    DeviceConfig deviceConfig;
-  shared_ptr<Cli> createSSH(
-      shared_ptr<folly::IOThreadPoolExecutor> executor);
+  DeviceConfig deviceConfig;
+  shared_ptr<Cli> createSSH(shared_ptr<folly::IOThreadPoolExecutor> executor);
 
   shared_ptr<Cli> getIo(
       shared_ptr<Cli> underlyingCliLayer,

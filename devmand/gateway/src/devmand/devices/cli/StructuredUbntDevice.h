@@ -22,10 +22,7 @@ namespace cli {
 using namespace devmand::channels::cli;
 
 class StructuredUbntDevice : public Device {
- private:
-  Command createInterfaceCommand(string name, bool enabled);
-
-public:
+ public:
   StructuredUbntDevice(
       Application& application,
       const Id _id,
@@ -47,7 +44,7 @@ public:
   std::shared_ptr<State> getState() override;
 
  protected:
- void setConfig(const folly::dynamic& config) override;
+  void setConfig(const folly::dynamic& config) override;
 
  private:
   std::shared_ptr<Channel> channel;

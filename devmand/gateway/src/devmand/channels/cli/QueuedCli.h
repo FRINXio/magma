@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <boost/thread/recursive_mutex.hpp>
 #include <devmand/channels/cli/Cli.h>
 #include <folly/Executor.h>
 #include <folly/executors/SerialExecutor.h>
@@ -16,6 +17,7 @@ namespace devmand::channels::cli {
 
 using namespace std;
 using namespace folly;
+using boost::recursive_mutex;
 
 /*
  * TODO: throw exception when queue is full
@@ -54,6 +56,7 @@ class QueuedCli : public Cli {
       function<Future<string>()> innerFunc);
 
   void triggerDequeue();
+  recursive_mutex mutex;
 
  public:
   QueuedCli(

@@ -64,16 +64,15 @@ shared_ptr<Cli> IoConfigurationBuilder::createAll(
             10,
             std::make_shared<NamedThreadFactory>(
                 "persession")); // TODO cast to Executor
-    return getIo(
-        underlyingCliLayerFactory(executor), timekeeper, commandCache);
+    return getIo(underlyingCliLayerFactory(executor), timekeeper, commandCache);
   };
 
   // create reconnecting cli
   shared_ptr<CPUThreadPoolExecutor> rExecutor =
       std::make_shared<CPUThreadPoolExecutor>(
           2, std::make_shared<NamedThreadFactory>("rcli"));
-  shared_ptr<ReconnectingCli> rcli =
-      make_shared<ReconnectingCli>(deviceConfig.id, rExecutor, move(cliFactory));
+  shared_ptr<ReconnectingCli> rcli = make_shared<ReconnectingCli>(
+      deviceConfig.id, rExecutor, move(cliFactory));
   // create keepalive cli
   shared_ptr<CPUThreadPoolExecutor> kaExecutor =
       std::make_shared<CPUThreadPoolExecutor>(
@@ -89,8 +88,8 @@ shared_ptr<Cli> IoConfigurationBuilder::createAll(
 
 shared_ptr<Cli> IoConfigurationBuilder::createSSH(
     shared_ptr<IOThreadPoolExecutor> executor) {
-  MLOG(MDEBUG) << "Creating CLI ssh device for " << deviceConfig.id << " (host: " << deviceConfig.ip
-               << ")";
+  MLOG(MDEBUG) << "Creating CLI ssh device for " << deviceConfig.id
+               << " (host: " << deviceConfig.ip << ")";
   const auto& plaintextCliKv = deviceConfig.channelConfigs.at("cli").kvPairs;
   // crate session
   const std::shared_ptr<SshSessionAsync>& session =
@@ -129,8 +128,8 @@ shared_ptr<Cli> IoConfigurationBuilder::getIo(
     shared_ptr<folly::ThreadWheelTimekeeper> timekeeper,
     shared_ptr<CliCache> commandCache) {
   // create caching cli
-  const shared_ptr<ReadCachingCli>& ccli =
-      std::make_shared<ReadCachingCli>(deviceConfig.id, underlyingCliLayer, commandCache);
+  const shared_ptr<ReadCachingCli>& ccli = std::make_shared<ReadCachingCli>(
+      deviceConfig.id, underlyingCliLayer, commandCache);
   // create timeout tracker
   const shared_ptr<TimeoutTrackingCli>& ttcli =
       std::make_shared<TimeoutTrackingCli>(

@@ -14,8 +14,10 @@
 #include <devmand/channels/cli/QueuedCli.h>
 #include <devmand/test/cli/utils/Log.h>
 #include <devmand/test/cli/utils/MockCli.h>
+#include <folly/Executor.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
 #include <folly/executors/ThreadedExecutor.h>
+#include <folly/futures/Future.h>
 #include <gtest/gtest.h>
 #include <chrono>
 
@@ -67,6 +69,31 @@ TEST_F(QueuedCliTest, queuedCli) {
   EXPECT_EQ(values.size(), results.size());
   for (unsigned int i = 0; i < values.size(); ++i) {
     EXPECT_EQ(boost::algorithm::trim_copy(values[i].value()), results[i]);
+  }
+}
+
+TEST_F(QueuedCliTest, queueOrderingTest) {
+  unsigned int iterations = 200;
+  unsigned int parallelThreads = 165;
+  shared_ptr<CPUThreadPoolExecutor> queuedCliParallelExecutor =
+      make_shared<CPUThreadPoolExecutor>(parallelThreads);
+  Command cmd = Command::makeReadCommand("1\n2\n3\n4\n5\n6\n7\n8\n9");
+  const shared_ptr<QueuedCli>& cli =
+      make_shared<QueuedCli>("testOrder", make_shared<EchoCli>(), executor);
+
+  vector<Future<string>> queuedFutures;
+
+  for (unsigned long i = 0; i < iterations; i++) {
+    queuedFutures.emplace_back(folly::via(
+        queuedCliParallelExecutor.get(),
+        [cli, cmd]() { return cli->execute(cmd); }));
+  }
+
+  vector<string> output =
+      collect(queuedFutures.begin(), queuedFutures.end()).get();
+
+  for (unsigned long i = 0; i < iterations; i++) {
+    EXPECT_EQ(output[i], "123456789");
   }
 }
 
