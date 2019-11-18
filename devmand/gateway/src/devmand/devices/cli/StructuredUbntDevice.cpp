@@ -49,6 +49,12 @@ using OpenconfigInterface = OpenconfigInterfaces::Interface;
 using OpenconfigConfig = OpenconfigInterface::Config;
 using folly::dynamic;
 
+static Command createInterfaceCommand(string name, bool enabled) {
+  string shutdownCmd = enabled ? "no shutdown" : "shutdown";
+  return Command::makeReadCommand(
+      "configure\ninterface " + name + "\n" + shutdownCmd + "\nend");
+}
+
 static const auto shutdown = regex("shutdown");
 static const auto description = regex(R"(description '?(.+?)'?)");
 static const auto mtu = regex(R"(mtu (.+))");
@@ -301,25 +307,29 @@ StructuredUbntDevice::StructuredUbntDevice(
     const shared_ptr<CliCache> _cmdCache)
     : Device(application, id_, true), channel(_channel), cmdCache(_cmdCache) {}
 
-
-void StructuredUbntDevice::setConfig(const dynamic & config) {
-  const string &json = folly::toJson(config);
-  auto &bundle = mreg->getBundle(Model::OPENCONFIG_0_1_6);
-  const shared_ptr<OpenconfigInterfaces> &ydkModel = make_shared<OpenconfigInterfaces>();
+void StructuredUbntDevice::setConfig(const dynamic& config) {
+  const string& json = folly::toJson(config);
+  auto& bundle = mreg->getBundle(Model::OPENCONFIG_0_1_6);
+  const shared_ptr<OpenconfigInterfaces>& ydkModel =
+      make_shared<OpenconfigInterfaces>();
   const shared_ptr<Entity> decodedIfcEntity = bundle.decode(json, ydkModel);
   MLOG(MDEBUG) << decodedIfcEntity->get_segment_path();
 
-    for (shared_ptr<Entity> entity : ydkModel->interface.entities()) {
-       shared_ptr<OpenconfigInterface> iface = std::static_pointer_cast<OpenconfigInterface >(entity);
-       shared_ptr<OpenconfigConfig> openConfig = iface->config;
-       if(openConfig->type.get() != ietf::iana_if_type::EthernetCsmacd().to_string()) {
-           continue;
-       }
-       string enabled = openConfig->enabled.get(); //TODO YLeaf does not support bool
-       string name = openConfig->name;
-       channel->execute(createInterfaceCommand(name, enabled == "true" ? true : false));
-       return;
+  for (shared_ptr<Entity> entity : ydkModel->interface.entities()) {
+    shared_ptr<OpenconfigInterface> iface =
+        std::static_pointer_cast<OpenconfigInterface>(entity);
+    shared_ptr<OpenconfigConfig> openConfig = iface->config;
+    if (openConfig->type.get() !=
+        ietf::iana_if_type::EthernetCsmacd().to_string()) {
+      continue;
     }
+    string enabled =
+        openConfig->enabled.get(); // TODO YLeaf does not support bool
+    string name = openConfig->name;
+    channel->execute(
+        createInterfaceCommand(name, enabled == "true" ? true : false));
+    return;
+  }
 }
 
 shared_ptr<State> StructuredUbntDevice::getState() {
@@ -351,11 +361,6 @@ shared_ptr<State> StructuredUbntDevice::getState() {
   });
 
   return state;
-}
-
-Command StructuredUbntDevice::createInterfaceCommand(string name, bool enabled) {
-    string shutdownCmd = enabled ? "no shutdown" : "shutdown";
-    return Command::makeReadCommand("configure\ninterface " + name + "\n" + shutdownCmd + "\nend");
 }
 
 } // namespace cli
