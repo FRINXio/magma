@@ -13,4 +13,4 @@ done
 
 tp_end=$(date +%s)
 runtime=$((tp_end-tp_start))
-echo "The thirdparty script took ${runtime} seconds to run."
+echo "The thirdparty script took: ${runtime} seconds to run."
