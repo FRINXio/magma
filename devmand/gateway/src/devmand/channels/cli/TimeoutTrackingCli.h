@@ -19,6 +19,9 @@ using namespace std;
 using namespace folly;
 using devmand::channels::cli::Command;
 
+static constexpr std::chrono::seconds defaultCommandTimeout =
+    std::chrono::seconds(5);
+
 // CLI layer that should be instanciated below QueuedCli. It throws
 // FutureTimeout if Future returned by
 // underlying layer does not return result within specified time period
@@ -31,7 +34,7 @@ class TimeoutTrackingCli : public Cli,
       shared_ptr<Cli> cli,
       shared_ptr<folly::ThreadWheelTimekeeper> timekeeper,
       shared_ptr<folly::Executor> executor,
-      std::chrono::milliseconds timeoutInterval = std::chrono::seconds(5));
+      std::chrono::milliseconds _timeoutInterval = defaultCommandTimeout);
 
   ~TimeoutTrackingCli() override;
 

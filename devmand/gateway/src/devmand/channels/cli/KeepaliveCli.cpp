@@ -52,7 +52,6 @@ KeepaliveCli::KeepaliveCli(
       backoffAfterKeepaliveTimeout(_backoffAfterKeepaliveTimeout) {
   assert(_keepAliveCommand.skipCache());
   shutdown = false;
-
   MLOG(MDEBUG) << "[" << id << "] "
                << "initialized";
 }

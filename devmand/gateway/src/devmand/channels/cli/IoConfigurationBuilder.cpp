@@ -37,88 +37,108 @@ using folly::EvictingCacheMap;
 using folly::IOThreadPoolExecutor;
 
 IoConfigurationBuilder::IoConfigurationBuilder(
-    const DeviceConfig& _deviceConfig)
-    : deviceConfig(_deviceConfig),
-      plaintextCliKv(deviceConfig.channelConfigs.at("cli").kvPairs) {}
+    const DeviceConfig& deviceConfig) {
+  const std::map<std::string, std::string>& plaintextCliKv =
+      deviceConfig.channelConfigs.at("cli").kvPairs;
+  connectionParameters = make_shared<ConnectionParameters>();
+  connectionParameters->id = deviceConfig.id;
+  connectionParameters->ip = deviceConfig.ip;
+  connectionParameters->username = plaintextCliKv.at("username");
+  connectionParameters->password = plaintextCliKv.at("password");
+  connectionParameters->port = std::stoi(plaintextCliKv.at("port"));
+  connectionParameters->flavour =
+      plaintextCliKv.find("flavour") != plaintextCliKv.end()
+      ? CliFlavour::create(plaintextCliKv.at("flavour"))
+      : CliFlavour::create("");
+  connectionParameters->kaTimeout = loadTimeout(
+      plaintextCliKv, configKeepAliveIntervalSeconds, defaultKeepaliveInterval);
+  connectionParameters->cmdTimeout = loadTimeout(
+      plaintextCliKv, configMaxCommandTimeoutSeconds, defaultCommandTimeout);
+}
 
-shared_ptr<Cli> IoConfigurationBuilder::createAll(
-    shared_ptr<CliCache> commandCache) {
-  return createAll(
-      [=](shared_ptr<IOThreadPoolExecutor> executor) -> shared_ptr<Cli> {
-        return createSSH(executor);
-      },
-      commandCache);
+IoConfigurationBuilder::~IoConfigurationBuilder() {
+  MLOG(MDEBUG) << "~IoConfigurationBuilder";
 }
 
 shared_ptr<Cli> IoConfigurationBuilder::createAll(
-    function<shared_ptr<Cli>(shared_ptr<IOThreadPoolExecutor>)>
-        underlyingCliLayerFactory,
+    shared_ptr<CliCache> commandCache) {
+  return createAll(createSSH, commandCache);
+}
+
+chrono::seconds IoConfigurationBuilder::loadTimeout(
+    const std::map<std::string, std::string>& plaintextCliKv,
+    const string& configKey,
+    chrono::seconds defaultValue) {
+  if (plaintextCliKv.find(configKey) != plaintextCliKv.end()) {
+    return chrono::seconds(stoi(plaintextCliKv.at(configKey)));
+  } else {
+    return defaultValue;
+  }
+}
+
+shared_ptr<Cli> IoConfigurationBuilder::createAll(
+    function<shared_ptr<Cli>(
+        shared_ptr<IOThreadPoolExecutor>,
+        shared_ptr<ConnectionParameters>)> underlyingCliLayerFactory,
     shared_ptr<CliCache> commandCache) {
   shared_ptr<folly::ThreadWheelTimekeeper> timekeeper =
       make_shared<folly::ThreadWheelTimekeeper>(); // TODO use singleton when
                                                    // folly is initialized
 
   // TODO make Executor sharing configurable
-  function<shared_ptr<Cli>()> cliFactory = [=]() -> shared_ptr<Cli> {
+  function<shared_ptr<Cli>()> cliFactory = [underlyingCliLayerFactory,
+                                            params = connectionParameters,
+                                            timekeeper,
+                                            commandCache]() -> shared_ptr<Cli> {
     shared_ptr<IOThreadPoolExecutor> executor =
         make_shared<IOThreadPoolExecutor>(
             10, std::make_shared<NamedThreadFactory>("persession"));
-    return getIo(underlyingCliLayerFactory(executor), timekeeper, commandCache);
+    return getIo(
+        params,
+        underlyingCliLayerFactory(executor, params),
+        timekeeper,
+        commandCache);
   };
 
   // create reconnecting cli
   shared_ptr<CPUThreadPoolExecutor> rExecutor =
       std::make_shared<CPUThreadPoolExecutor>(
           2, std::make_shared<NamedThreadFactory>("rcli"));
-  shared_ptr<ReconnectingCli> rcli =
-      ReconnectingCli::make(deviceConfig.id, rExecutor, move(cliFactory));
+  shared_ptr<ReconnectingCli> rcli = ReconnectingCli::make(
+      connectionParameters->id, rExecutor, move(cliFactory));
   // create keepalive cli
   shared_ptr<CPUThreadPoolExecutor> kaExecutor =
       std::make_shared<CPUThreadPoolExecutor>(
           2, std::make_shared<NamedThreadFactory>("kacli"));
 
-  shared_ptr<KeepaliveCli> kaCli;
-  if (plaintextCliKv.find(CONFIG_KEEP_ALIVE_INTERVAL) != plaintextCliKv.end()) {
-    kaCli = KeepaliveCli::make(
-        deviceConfig.id,
-        rcli,
-        kaExecutor,
-        timekeeper,
-        chrono::seconds(stoi(plaintextCliKv.at(CONFIG_KEEP_ALIVE_INTERVAL))));
-  } else {
-    kaCli = KeepaliveCli::make(deviceConfig.id, rcli, kaExecutor, timekeeper);
-  }
-
+  shared_ptr<KeepaliveCli> kaCli = KeepaliveCli::make(
+      connectionParameters->id,
+      rcli,
+      kaExecutor,
+      timekeeper,
+      connectionParameters->kaTimeout);
   return kaCli;
-
-  //// without rcli
-  //  shared_ptr<IOThreadPoolExecutor> kaExecutor =
-  //  std::make_shared<IOThreadPoolExecutor>(8,
-  //  std::make_shared<NamedThreadFactory>("kacli"));
-  //  return make_shared<KeepaliveCli>(cliFactory(), kaExecutor, timekeeper);
 }
 
 shared_ptr<Cli> IoConfigurationBuilder::createSSH(
-    shared_ptr<IOThreadPoolExecutor> executor) {
-  MLOG(MDEBUG) << "Creating CLI ssh device for " << deviceConfig.id
-               << " (host: " << deviceConfig.ip << ")";
+    shared_ptr<IOThreadPoolExecutor> executor,
+    shared_ptr<ConnectionParameters> params) {
+  MLOG(MDEBUG) << "Creating CLI ssh device for " << params->id
+               << " (host: " << params->ip << ")";
 
-  // crate session
+  // create session
   const std::shared_ptr<SshSessionAsync>& session =
-      std::make_shared<SshSessionAsync>(deviceConfig.id, executor);
+      std::make_shared<SshSessionAsync>(params->id, executor);
   // opening SSH connection
   session
       ->openShell(
-          deviceConfig.ip,
-          std::stoi(plaintextCliKv.at("port")),
-          plaintextCliKv.at("username"),
-          plaintextCliKv.at("password"))
-      .get();
+          params->ip,
+          params->port,
+          params->username,
+          params->password)
+      .get(); // TODO make this async
 
-  shared_ptr<CliFlavour> cl =
-      plaintextCliKv.find("flavour") != plaintextCliKv.end()
-      ? CliFlavour::create(plaintextCliKv.at("flavour"))
-      : CliFlavour::create("");
+  shared_ptr<CliFlavour> cl = params->flavour;
 
   // create CLI
   const shared_ptr<PromptAwareCli>& cli =
@@ -136,22 +156,24 @@ shared_ptr<Cli> IoConfigurationBuilder::createSSH(
 }
 
 shared_ptr<Cli> IoConfigurationBuilder::getIo(
+    shared_ptr<ConnectionParameters> params,
     shared_ptr<Cli> underlyingCliLayer,
     shared_ptr<folly::ThreadWheelTimekeeper> timekeeper,
     shared_ptr<CliCache> commandCache) {
   // create caching cli
   const shared_ptr<ReadCachingCli>& ccli = std::make_shared<ReadCachingCli>(
-      deviceConfig.id, underlyingCliLayer, commandCache);
+      params->id, underlyingCliLayer, commandCache);
   // create timeout tracker
   shared_ptr<TimeoutTrackingCli> ttcli = TimeoutTrackingCli::make(
-      deviceConfig.id,
+      params->id,
       ccli,
       timekeeper,
       std::make_shared<folly::CPUThreadPoolExecutor>(
-          5, std::make_shared<NamedThreadFactory>("ttcli")));
+          5, std::make_shared<NamedThreadFactory>("ttcli")),
+      params->cmdTimeout);
   // create Queued cli
   shared_ptr<QueuedCli> qcli = QueuedCli::make(
-      deviceConfig.id,
+      params->id,
       ttcli,
       std::make_shared<folly::CPUThreadPoolExecutor>(
           2, std::make_shared<NamedThreadFactory>("qcli")));

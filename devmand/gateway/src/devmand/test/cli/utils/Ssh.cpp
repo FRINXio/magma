@@ -24,12 +24,11 @@ shared_ptr<CPUThreadPoolExecutor> testExecutor =
 atomic_bool sshInitialized(false);
 
 void initSsh() {
-  if (sshInitialized.load()) {
-    return;
+  bool f = false;
+  if (sshInitialized.compare_exchange_strong(f, true)) {
+    Engine::initSsh();
+    MLOG(MDEBUG) << "Ssh for test initialized";
   }
-  Engine::initSsh();
-  sshInitialized.store(true);
-  MLOG(MDEBUG) << "Ssh for test initialized";
 }
 
 static const auto sleep = regex(R"(sleep (\d+))");

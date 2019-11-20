@@ -203,7 +203,9 @@ add_executable(devmantest
   ${PROJECT_SOURCE_DIR}/src/devmand/test/FileWatcherTest.cpp
   ${PROJECT_SOURCE_DIR}/src/devmand/test/MikrotikChannelTest.cpp
   ${PROJECT_SOURCE_DIR}/src/devmand/test/PingChannelTest.cpp
-  ${PROJECT_SOURCE_DIR}/src/devmand/test/SnmpChannelTest.cpp)
+  ${PROJECT_SOURCE_DIR}/src/devmand/test/SnmpChannelTest.cpp
+  ${PROJECT_SOURCE_DIR}/src/devmand/test/cli/ReconnectingSshTest.cpp
+        )
 
 target_link_libraries(devmantest
   devman

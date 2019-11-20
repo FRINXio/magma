@@ -76,8 +76,8 @@ Future<string> TimeoutTrackingCli::executeSomething(
       .via(executor.get())
       .onTimeout(
           timeoutInterval,
-          [this, loggingPrefix, cmdString](...) -> Future<string> {
-            MLOG(MDEBUG) << "[" << id << "] " << loggingPrefix << "('"
+          [_id = this->id, loggingPrefix, cmdString](...) -> Future<string> {
+            MLOG(MDEBUG) << "[" << _id << "] " << loggingPrefix << "('"
                          << cmdString << "') timing out";
             throw FutureTimeout();
           },

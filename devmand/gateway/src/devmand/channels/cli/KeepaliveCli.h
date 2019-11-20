@@ -17,6 +17,8 @@ namespace devmand::channels::cli {
 using namespace std;
 using devmand::channels::cli::Command;
 
+static constexpr chrono::seconds defaultKeepaliveInterval = chrono::seconds(60);
+
 // CLI layer that should be above QueuedCli. Periodically schedules keepalive
 // command to prevent dropping
 // of inactive connection.
@@ -27,7 +29,7 @@ class KeepaliveCli : public Cli, public enable_shared_from_this<KeepaliveCli> {
       shared_ptr<Cli> _cli,
       shared_ptr<folly::Executor> parentExecutor,
       shared_ptr<folly::ThreadWheelTimekeeper> _timekeeper,
-      chrono::milliseconds heartbeatInterval = chrono::seconds(60),
+      chrono::milliseconds heartbeatInterval = defaultKeepaliveInterval,
       Command&& keepAliveCommand = Command::makeReadCommand("\n", true),
       chrono::milliseconds backoffAfterKeepaliveTimeout = // TODO: remove
       chrono::seconds(5));

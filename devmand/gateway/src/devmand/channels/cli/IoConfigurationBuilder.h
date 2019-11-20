@@ -23,27 +23,52 @@ using namespace std;
 
 using folly::IOThreadPoolExecutor;
 
+static constexpr auto configKeepAliveIntervalSeconds =
+    "keepAliveIntervalSeconds";
+static constexpr auto configMaxCommandTimeoutSeconds =
+    "maxCommandTimeoutSeconds";
+
 class IoConfigurationBuilder {
  public:
   IoConfigurationBuilder(const DeviceConfig& deviceConfig);
 
+  ~IoConfigurationBuilder();
+
   shared_ptr<Cli> createAll(shared_ptr<CliCache> commandCache);
 
-  shared_ptr<Cli> createAll(
-      function<shared_ptr<Cli>(shared_ptr<folly::IOThreadPoolExecutor>)>
-          underlyingCliLayerFactory,
-      shared_ptr<CliCache> commandCache); // visible for testing
-
-  const string CONFIG_KEEP_ALIVE_INTERVAL = "keepAliveInterval";
-
  private:
-  DeviceConfig deviceConfig;
-  std::map<std::string, std::string>& plaintextCliKv;
-  shared_ptr<Cli> createSSH(shared_ptr<folly::IOThreadPoolExecutor> executor);
+  struct ConnectionParameters {
+    string username;
+    string password;
+    string ip;
+    string id;
+    int port;
+    shared_ptr<CliFlavour> flavour;
+    chrono::seconds kaTimeout;
+    chrono::seconds cmdTimeout;
+  };
 
-  shared_ptr<Cli> getIo(
+  shared_ptr<ConnectionParameters> connectionParameters;
+
+  shared_ptr<Cli> createAll(
+      function<shared_ptr<Cli>(
+          shared_ptr<folly::IOThreadPoolExecutor>,
+          shared_ptr<ConnectionParameters>)> underlyingCliLayerFactory,
+      shared_ptr<CliCache> commandCache);
+
+  static shared_ptr<Cli> createSSH(
+      shared_ptr<folly::IOThreadPoolExecutor> executor,
+      shared_ptr<ConnectionParameters> params);
+
+  static shared_ptr<Cli> getIo(
+      shared_ptr<ConnectionParameters> params,
       shared_ptr<Cli> underlyingCliLayer,
       shared_ptr<folly::ThreadWheelTimekeeper> timekeeper,
       shared_ptr<CliCache> commandCache = ReadCachingCli::createCache());
+
+  static chrono::seconds loadTimeout(
+      const std::map<std::string, std::string>& plaintextCliKv,
+      const string& configKey,
+      chrono::seconds defaultValue);
 };
 } // namespace devmand::channels::cli

@@ -53,14 +53,6 @@ PromptAwareCli::PromptAwareCli(
     shared_ptr<CliFlavour> _cliFlavour)
     : session(_session), cliFlavour(_cliFlavour) {}
 
-void PromptAwareCli::init( // TODO remove
-    const string hostname,
-    const int port,
-    const string username,
-    const string password) {
-  session->openShell(hostname, port, username, password).get();
-}
-
 folly::Future<std::string> PromptAwareCli::execute(const Command& cmd) {
   const string& command = cmd.toString();
   return session->write(command)

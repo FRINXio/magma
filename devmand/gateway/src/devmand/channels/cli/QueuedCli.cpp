@@ -43,8 +43,6 @@ QueuedCli::~QueuedCli() {
     queueEntry.promise->setException(runtime_error("QCli: Shutting down"));
   }
 
-  via(serialExecutorKeepAlive, []() {}).get();
-
   serialExecutorKeepAlive = nullptr;
   parentExecutor = nullptr;
   cli = nullptr;
@@ -111,6 +109,7 @@ Future<string> QueuedCli::executeSomething(
  * Start queue reading on consumer thread if queue contains new items.
  * It is safe to call this method anytime, it is thread safe.
  */
+// TODO: refactor lambdas into separate methods
 void QueuedCli::triggerDequeue() {
   if (shutdown)
     return;

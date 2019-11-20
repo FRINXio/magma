@@ -32,6 +32,7 @@ SshSessionAsync::SshSessionAsync(
     : executor(_executor), session(_id), reading(false) {}
 
 SshSessionAsync::~SshSessionAsync() {
+  MLOG(MDEBUG) << "~SshSessionAsync started";
   if (this->sessionEvent != nullptr &&
       event_get_base(this->sessionEvent) != nullptr) {
     event_free(this->sessionEvent);
@@ -41,6 +42,7 @@ SshSessionAsync::~SshSessionAsync() {
   while (reading.load()) {
     // waiting for any pending read to run out
   }
+  MLOG(MDEBUG) << "~SshSessionAsync finished";
 }
 
 Future<string> SshSessionAsync::read(int timeoutMillis) {

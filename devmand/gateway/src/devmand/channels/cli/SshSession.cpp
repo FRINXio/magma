@@ -67,7 +67,7 @@ void SshSession::openShell(
   ssh_options_set(sessionState.session, SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
   ssh_options_set(sessionState.session, SSH_OPTIONS_PORT, &port);
   // Connection timeout in seconds
-  long timeout = 120;
+  long timeout = 10; // TODO: make configurable
   ssh_options_set(sessionState.session, SSH_OPTIONS_TIMEOUT, &timeout);
 
   checkSuccess(ssh_connect(sessionState.session), SSH_OK);

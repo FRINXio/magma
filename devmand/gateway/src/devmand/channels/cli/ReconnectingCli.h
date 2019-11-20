@@ -28,7 +28,8 @@ class ReconnectingCli : public Cli,
   static shared_ptr<ReconnectingCli> make(
       string id,
       shared_ptr<Executor> executor,
-      function<shared_ptr<Cli>()>&& createCliStack);
+      function<shared_ptr<Cli>()>&& createCliStack,
+      chrono::milliseconds quietPeriod = chrono::seconds(5));
 
   ~ReconnectingCli() override;
 
@@ -37,23 +38,36 @@ class ReconnectingCli : public Cli,
   folly::Future<std::string> execute(const Command& cmd) override;
 
  private:
-  string id;
+  struct ReconnectParameters {
+    string id;
 
-  shared_ptr<Executor> executor;
+    atomic<bool> isReconnecting;
 
-  function<shared_ptr<devmand::channels::cli::Cli>()> createCliStack;
+    atomic<bool> shutdown;
 
-  shared_ptr<devmand::channels::cli::Cli> cli;
+    shared_ptr<Executor> executor;
+
+    function<shared_ptr<devmand::channels::cli::Cli>()> createCliStack;
+
+    shared_ptr<devmand::channels::cli::Cli> maybeCli; // TODO atomic?
+
+    std::chrono::milliseconds quietPeriod;
+  };
+
+  shared_ptr<ReconnectParameters> reconnectParameters;
 
   ReconnectingCli(
       string id,
       shared_ptr<Executor> executor,
-      function<shared_ptr<Cli>()>&& createCliStack);
+      function<shared_ptr<Cli>()>&& createCliStack,
+      chrono::milliseconds quietPeriod);
 
   Future<string> executeSomething(
       const string&& loggingPrefix,
-      const function<Future<string>()>& innerFunc,
+      const function<Future<string>(shared_ptr<Cli>)>& innerFunc,
       const string&& loggingSuffix);
+
+  static void triggerReconnect(shared_ptr<ReconnectParameters> params);
 };
 } // namespace cli
 } // namespace channels

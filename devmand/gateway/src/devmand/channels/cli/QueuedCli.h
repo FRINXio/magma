@@ -67,10 +67,6 @@ class QueuedCli : public Cli, public enable_shared_from_this<QueuedCli> {
   static std::shared_ptr<QueuedCli>
   make(string id, shared_ptr<Cli> cli, shared_ptr<Executor> parentExecutor);
 
-  QueuedCli() = delete;
-
-  QueuedCli(const QueuedCli&) = delete;
-
   ~QueuedCli() override;
 
   Future<string> executeAndRead(const Command& cmd) override;
