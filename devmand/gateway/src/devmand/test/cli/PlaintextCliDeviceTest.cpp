@@ -16,6 +16,7 @@
 #include <devmand/test/cli/utils/MockCli.h>
 #include <devmand/test/cli/utils/Ssh.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
+#include <folly/json.h>
 #include <gtest/gtest.h>
 
 namespace devmand {
@@ -50,21 +51,20 @@ TEST_F(PlaintextCliDeviceTest, checkEcho) {
   devmand::Application app;
   cartography::DeviceConfig deviceConfig;
   devmand::cartography::ChannelConfig chnlCfg;
-  std::map<std::string, std::string> kvPairs;
-  kvPairs.insert(std::make_pair("stateCommand", "show interfaces brief"));
+  map<string, string> kvPairs;
+  kvPairs.insert(make_pair("stateCommand", "show interfaces brief"));
   chnlCfg.kvPairs = kvPairs;
-  deviceConfig.channelConfigs.insert(std::make_pair("cli", chnlCfg));
+  deviceConfig.channelConfigs.insert(make_pair("cli", chnlCfg));
 
-  const std::shared_ptr<EchoCli>& echoCli = std::make_shared<EchoCli>();
-  const std::shared_ptr<Channel>& channel =
-      std::make_shared<Channel>("test", echoCli);
-  std::unique_ptr<devices::Device> dev = std::make_unique<PlaintextCliDevice>(
+  const shared_ptr<EchoCli>& echoCli = make_shared<EchoCli>();
+  const shared_ptr<Channel>& channel = make_shared<Channel>("test", echoCli);
+  unique_ptr<devices::Device> dev = make_unique<PlaintextCliDevice>(
       app, deviceConfig.id, "show interfaces brief", channel);
 
-  std::shared_ptr<State> state = dev->getState();
+  shared_ptr<State> state = dev->getState();
   const folly::dynamic& stateResult = state->collect().get();
 
-  std::stringstream buffer;
+  stringstream buffer;
   buffer << stateResult["show interfaces brief"];
   EXPECT_EQ("show interfaces brief", buffer.str());
 }
@@ -72,49 +72,65 @@ TEST_F(PlaintextCliDeviceTest, checkEcho) {
 static DeviceConfig getConfig(string port) {
   DeviceConfig deviceConfig;
   ChannelConfig chnlCfg;
-  std::map<std::string, std::string> kvPairs;
-  kvPairs.insert(std::make_pair("stateCommand", "echo 123"));
-  kvPairs.insert(std::make_pair("port", port));
-  kvPairs.insert(std::make_pair("username", "root"));
-  kvPairs.insert(std::make_pair("password", "root"));
+  map<string, string> kvPairs;
+  kvPairs.insert(make_pair("stateCommand", "echo 123"));
+  kvPairs.insert(make_pair("port", port));
+  kvPairs.insert(make_pair("username", "root"));
+  kvPairs.insert(make_pair("password", "root"));
   chnlCfg.kvPairs = kvPairs;
-  deviceConfig.channelConfigs.insert(std::make_pair("cli", chnlCfg));
+  deviceConfig.channelConfigs.insert(make_pair("cli", chnlCfg));
   deviceConfig.ip = "localhost";
   deviceConfig.id = "ubuntu-test-device";
   return deviceConfig;
 }
 
-// TODO: fix getState so that it does not fail when disconnected - see
-// FrinxDevice
-TEST_F(PlaintextCliDeviceTest, DISABLED_plaintextCliDevicesError) {
+TEST_F(PlaintextCliDeviceTest, plaintextCliDevicesError) {
   Application app;
-  EXPECT_ANY_THROW(PlaintextCliDevice::createDevice(app, getConfig("9998")));
+  auto plaintextDevice =
+      PlaintextCliDevice::createDevice(app, getConfig("9998"));
+  const shared_ptr<State>& ptr = plaintextDevice->getState();
+  auto state = ptr->collect().get();
+
+  // FIXME State class overrides status set from device to always say UP
+  //  EXPECT_EQ(state["fbc-symphony-device:system"]["status"], "DOWN");
+  EXPECT_EQ(state["fbc-symphony-device:errors"][0], "Not connected");
 }
 
-// TODO: fix getState so that it does not fail when disconnected - see
-// FrinxDevice
-TEST_F(PlaintextCliDeviceTest, DISABLED_plaintextCliDevice) {
+TEST_F(PlaintextCliDeviceTest, plaintextCliDevice) {
   Application app;
 
-  std::vector<std::unique_ptr<Device>> ds;
-  for (int i = 0; i < 1; i++) {
-    ds.push_back(
-        std::move(PlaintextCliDevice::createDevice(app, getConfig("9999"))));
-  }
+  unique_ptr<Device> dev =
+      PlaintextCliDevice::createDevice(app, getConfig("9999"));
 
-  for (const auto& dev : ds) {
-    std::shared_ptr<State> state = dev->getState();
-    auto t1 = std::chrono::high_resolution_clock::now();
+  int i = 0;
+  string output = "";
+  do {
+    if (i > 0) {
+      this_thread::sleep_for(chrono::seconds(1));
+    }
+
+    i++;
+
+    shared_ptr<State> state = dev->getState();
+    auto t1 = chrono::high_resolution_clock::now();
     const folly::dynamic& stateResult = state->collect().get();
-    auto t2 = std::chrono::high_resolution_clock::now();
+    auto t2 = chrono::high_resolution_clock::now();
     auto duration =
-        std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
+        chrono::duration_cast<chrono::microseconds>(t2 - t1).count();
     MLOG(MDEBUG) << "Retrieving state took: " << duration << " mu.";
-    std::stringstream buffer;
 
-    buffer << stateResult["echo 123"];
-    EXPECT_EQ("123", boost::algorithm::trim_copy(buffer.str()));
-  }
+    // FIXME instead of checking if there is output, check status once properly
+    // reported by State class
+    output = stateResult.getDefault("echo 123", "").asString();
+
+    if (i > 20) {
+      FAIL()
+          << "Unable to execute command, probably not connected, last state: "
+          << folly::toJson(stateResult);
+    }
+  } while (output == "");
+
+  EXPECT_EQ(string("123"), boost::algorithm::trim_copy(output));
 }
 
 } // namespace cli
