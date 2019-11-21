@@ -6,7 +6,7 @@ Magma is an open-source software platform that gives network operators an open, 
 
 * Allowing operators to offer cellular service without vendor lock-in with a modern, open source core network
 * Enabling op   erators    to manag  e their networks more effici   ently with more automation, less downtime, better predictability, and more agility to add new services and applications
-* Enabling federation between eddxisting MNOs and new infrastructure providers for expanding rural infrastructure
+* Enabling federation between e   ddxisting MNOs and new infrastructure providers for expanding rural infrastructure
 * Allowing operators who are constrained with licensed s  pectrum to add capacity and reach by using Wi-Fi and CBRS
 
 
