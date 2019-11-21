@@ -13,6 +13,7 @@
 #include <devmand/channels/cli/SshSessionAsync.h>
 #include <devmand/channels/cli/SshSocketReader.h>
 #include <devmand/test/cli/utils/Log.h>
+#include <devmand/test/cli/utils/Ssh.h>
 #include <folly/Singleton.h>
 #include <folly/executors/IOThreadPoolExecutor.h>
 #include <folly/futures/Future.h>
@@ -40,6 +41,7 @@ class CliScaleTest : public ::testing::Test {
  protected:
   void SetUp() override {
     devmand::test::utils::log::initLog();
+    devmand::test::utils::ssh::initSsh();
   }
 };
 

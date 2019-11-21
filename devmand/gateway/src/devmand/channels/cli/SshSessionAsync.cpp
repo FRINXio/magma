@@ -8,7 +8,7 @@
 #include <ErrorHandler.h>
 #include <devmand/channels/cli/SshSession.h>
 #include <devmand/channels/cli/SshSessionAsync.h>
-#include <folly/executors/IOThreadPoolExecutor.h>
+#include <folly/executors/IOExecutor.h>
 #include <folly/futures/Future.h>
 #include <chrono>
 #include <condition_variable>
@@ -28,8 +28,13 @@ using std::unique_lock;
 
 SshSessionAsync::SshSessionAsync(
     string _id,
-    shared_ptr<IOThreadPoolExecutor> _executor)
-    : executor(_executor), session(_id), reading(false) {}
+    shared_ptr<folly::Executor> _executor)
+    : executor(_executor),
+      serialExecutor(SerialExecutor::create(
+          folly::Executor::getKeepAliveToken(_executor.get()))),
+      session(_id),
+      reading(false),
+      matchingExpectedOutput(false) {}
 
 SshSessionAsync::~SshSessionAsync() {
   MLOG(MDEBUG) << "~SshSessionAsync started";
@@ -46,7 +51,7 @@ SshSessionAsync::~SshSessionAsync() {
 }
 
 Future<string> SshSessionAsync::read(int timeoutMillis) {
-  return via(executor.get(), [this, timeoutMillis] {
+  return via(serialExecutor.get(), [this, timeoutMillis] {
     return session.read(timeoutMillis);
   });
 }
@@ -56,19 +61,23 @@ Future<Unit> SshSessionAsync::openShell(
     int port,
     const string& username,
     const string& password) {
-  return via(executor.get(), [this, ip, port, username, password] {
+  return via(serialExecutor.get(), [this, ip, port, username, password] {
     session.openShell(ip, port, username, password);
   });
 }
 
 Future<Unit> SshSessionAsync::write(const string& command) {
-  return via(executor.get(), [this, command] { session.write(command); });
+  return via(serialExecutor.get(), [this, command] { session.write(command); });
 }
 
 Future<string> SshSessionAsync::readUntilOutput(const string& lastOutput) {
-  return via(executor.get(), [this, lastOutput] {
-    return this->readUntilOutputBlocking(lastOutput);
-  });
+  this->readingState.currentLastOutput = lastOutput;
+  this->readingState.promise = std::make_shared<Promise<string>>();
+  this->readingState.outputSoFar = "";
+  matchingExpectedOutput.store(true);
+  processDataInBuffer(); // we could have had something already waiting in the
+                         // queue
+  return this->readingState.promise->getFuture();
 }
 
 void SshSessionAsync::setEvent(event* event) {
@@ -78,57 +87,54 @@ void SshSessionAsync::setEvent(event* event) {
 void readCallback(evutil_socket_t fd, short what, void* ptr) {
   (void)fd;
   (void)what;
-  ((SshSessionAsync*)ptr)->readToBuffer();
+  ((SshSessionAsync*)ptr)->readSshDataToBuffer();
+  ((SshSessionAsync*)ptr)->processDataInBuffer();
 }
 
 socket_t SshSessionAsync::getSshFd() {
   return this->session.getSshFd();
 }
 
-void SshSessionAsync::readToBuffer() {
-  {
-    std::lock_guard<mutex> guard(mutex1);
-    ErrorHandler::executeWithCatch([this]() {
-      const string& output = this->session.read();
-      if (!output.empty()) {
-        readQueue.push(output);
-      }
-    });
-  }
-  condition.notify_one();
+void SshSessionAsync::readSshDataToBuffer() {
+  ErrorHandler::executeWithCatch([this]() {
+    const string& output = this->session.read();
+    if (!output.empty()) {
+      readQueue.push(output);
+    }
+  });
 }
 
 using namespace std::chrono_literals;
 
-string SshSessionAsync::readUntilOutputBlocking(string lastOutput) {
+void SshSessionAsync::matchExpectedOutput() {
+  if (not this->session.isOpen()) {
+    throw std::runtime_error("Session is closed");
+  }
+
+  if (not matchingExpectedOutput) { // we are not allowed to match unless
+                                    // readUntilOutput is called because we
+                                    // don't know against what to match
+    return;
+  }
   reading.store(true);
-  string result;
-  while (this->session.isOpen()) {
-    unique_lock<mutex> lck(mutex1);
-    bool satisfied = condition.wait_for(
-        lck, 1000ms, [this] { return this->readQueue.read_available() != 0; });
-
-    if (!satisfied) {
-      continue;
-    }
-
+  while (this->readQueue.read_available() != 0) {
     string output;
-    if (!readQueue.pop(output) ||
-        output.empty()) { // sometimes we get the string "" or " " back, we can
-                          // ignore that ...
-      continue;
-    }
-
-    result.append(output);
-    std::size_t found = result.find(lastOutput);
+    readQueue.pop(output);
+    this->readingState.outputSoFar.append(output);
+    std::size_t found = this->readingState.outputSoFar.find(
+        this->readingState.currentLastOutput);
     if (found != std::string::npos) {
       // TODO check for any additional output after lastOutput
-      reading.store(false);
-      return result.substr(0, found);
+      string final = this->readingState.outputSoFar.substr(0, found);
+      matchingExpectedOutput.store(false);
+      this->readingState.promise->setValue(final);
     }
   }
   reading.store(false);
-  throw std::runtime_error("Session is closed");
+}
+
+void SshSessionAsync::processDataInBuffer() {
+  via(serialExecutor.get(), [this] { this->matchExpectedOutput(); });
 }
 
 } // namespace sshsession

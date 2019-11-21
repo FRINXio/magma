@@ -14,9 +14,9 @@
 #include <devmand/channels/cli/QueuedCli.h>
 #include <devmand/test/cli/utils/Log.h>
 #include <devmand/test/cli/utils/MockCli.h>
+#include <devmand/test/cli/utils/Ssh.h>
 #include <folly/Executor.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
-#include <folly/executors/ThreadedExecutor.h>
 #include <folly/futures/Future.h>
 #include <gtest/gtest.h>
 #include <chrono>
@@ -36,6 +36,7 @@ class QueuedCliTest : public ::testing::Test {
  protected:
   void SetUp() override {
     devmand::test::utils::log::initLog();
+    devmand::test::utils::ssh::initSsh();
   }
 };
 
