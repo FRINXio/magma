@@ -18,6 +18,8 @@
 #include <folly/executors/ThreadedExecutor.h>
 #include <gtest/gtest.h>
 #include <chrono>
+#include <devmand/test/cli/utils/Ssh.h>
+#include <devmand/test/cli/utils/Log.h>
 
 namespace devmand {
 namespace test {
@@ -32,7 +34,13 @@ using devmand::devices::Device;
 using devmand::devices::State;
 using devmand::devices::cli::PlaintextCliDevice;
 
-class RealCliDeviceTest : public ::testing::Test {};
+class RealCliDeviceTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        devmand::test::utils::log::initLog();
+        devmand::test::utils::ssh::initSsh();
+    }
+};
 
 TEST_F(RealCliDeviceTest, DISABLED_ubiquiti) {
   Application app;

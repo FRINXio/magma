@@ -12,7 +12,8 @@
 #include <devmand/channels/cli/Command.h>
 #include <devmand/channels/cli/SshSession.h>
 #include <event2/event.h>
-#include <folly/executors/IOThreadPoolExecutor.h>
+#include <folly/executors/IOExecutor.h>
+#include <folly/executors/SerialExecutor.h>
 #include <folly/futures/Future.h>
 
 namespace devmand {
@@ -24,8 +25,10 @@ using boost::lockfree::capacity;
 using boost::lockfree::spsc_queue;
 using devmand::channels::cli::sshsession::SshSession;
 using folly::Future;
-using folly::IOThreadPoolExecutor;
+using folly::IOExecutor;
 using folly::makeFuture;
+using folly::Promise;
+using folly::SerialExecutor;
 using folly::Unit;
 using folly::via;
 using std::condition_variable;
@@ -37,18 +40,20 @@ void readCallback(evutil_socket_t fd, short, void* ptr);
 
 class SshSessionAsync {
  private:
-  shared_ptr<IOThreadPoolExecutor> executor;
+  folly::Executor::KeepAlive<SerialExecutor> executor;
   SshSession session;
   event* sessionEvent = nullptr;
   spsc_queue<string, capacity<200>> readQueue;
-  mutex mutex1;
-  condition_variable condition;
   std::atomic_bool reading;
+  std::atomic_bool matchingExpectedOutput;
+  struct ReadingState {
+    shared_ptr<Promise<string>> promise;
+    string currentLastOutput;
+    string outputSoFar;
+  } readingState;
 
  public:
-  explicit SshSessionAsync(
-      string _id,
-      shared_ptr<IOThreadPoolExecutor> _executor);
+  explicit SshSessionAsync(string _id, shared_ptr<IOExecutor> _executor);
   ~SshSessionAsync();
 
   Future<Unit> openShell(
@@ -61,9 +66,10 @@ class SshSessionAsync {
       int timeoutMillis); // for clearing ssh channel and prompt resolving
   Future<string> readUntilOutput(const string& lastOutput);
   void setEvent(event*);
-  void readToBuffer();
+  void readSshDataToBuffer();
+  void processDataInBuffer();
   socket_t getSshFd();
-  string readUntilOutputBlocking(string lastOutput);
+  void matchExpectedOutput();
 };
 
 } // namespace sshsession

@@ -23,6 +23,7 @@
 #include <chrono>
 #include <ctime>
 #include <thread>
+#include <devmand/test/cli/utils/Ssh.h>
 
 namespace devmand {
 namespace test {
@@ -40,6 +41,7 @@ class CliScaleTest : public ::testing::Test {
  protected:
   void SetUp() override {
     devmand::test::utils::log::initLog();
+    devmand::test::utils::ssh::initSsh();
   }
 };
 
