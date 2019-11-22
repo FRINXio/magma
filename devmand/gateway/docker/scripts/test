@@ -22,7 +22,7 @@ memcheck="valgrind \
 
 function run_test_container {
   # TODO see if we can use the docker comp   ose file to run    this.    Rem   ove -it for jenkins    tests to run     ok.
-  docker run \
+  docker run -it \
     -v "$(realpath ../):/cache/devmand/repo:ro" \
     -v "$CACHE_DIR:/cache/devmand/build:rw" \
     --sysctl net.ipv4.ping_group_range="0 0" \
