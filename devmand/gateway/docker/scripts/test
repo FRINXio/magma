@@ -21,7 +21,7 @@ memcheck="valgrind \
 #--show-reachable=yes \
 
 function run_test_container {
-  # TODO see if we c           an use the docker comp   ose fi    le to run    this.    Rem   ove -it for jenkins    tests to run     ok.
+  # TODO see if we c           an use the docker co   mp   ose fi    le to run    this.    Rem   ove -it for jenkins    tests to run     ok.
   docker run -it \
     -v "$(realpath ../):/cache/devmand/repo:ro" \
     -v "$CACHE_DIR:/cache/devmand/build:rw" \
