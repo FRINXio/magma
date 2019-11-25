@@ -40,6 +40,7 @@ string DefaultPromptResolver::resolvePrompt(
     shared_ptr<SshSessionAsync> session,
     const string& newline) {
   // TODO: return SemiFuture
+  MLOG(MDEBUG) << "Resolving prompt";
   session->read(DEFAULT_MILLIS).get(); // clear input, converges faster on
                                        // prompt
   for (int i = 1;; i++) {
