@@ -87,10 +87,7 @@ shared_ptr<Cli> IoConfigurationBuilder::createAllUsingFactory(
       10, std::make_shared<NamedThreadFactory>("persession"));
 
   function<SemiFuture<shared_ptr<Cli>>()> cliFactory =
-      [executor,
-       params = connectionParameters,
-       timekeeper,
-       commandCache]() /* -> SemiFuture<shared_ptr<Cli>>*/ {
+      [executor, params = connectionParameters, timekeeper, commandCache]() {
         return createPromptAwareCli(executor, params)
             .via(executor.get())
             .thenValue(
@@ -145,46 +142,56 @@ shared_ptr<Cli> IoConfigurationBuilder::createAllUsingFactory(
 Future<shared_ptr<Cli>> IoConfigurationBuilder::createPromptAwareCli(
     shared_ptr<IOThreadPoolExecutor> executor,
     shared_ptr<ConnectionParameters> params) {
-  MLOG(MDEBUG) << "Creating CLI ssh device for " << params->id
-               << " (host: " << params->ip << ")";
+  MLOG(MDEBUG) << "Creating CLI ssh device for " << params->id << " ("
+               << params->ip << ":" << params->port << ")";
 
   // create session
   std::shared_ptr<SshSessionAsync> session =
       std::make_shared<SshSessionAsync>(params->id, executor);
   // open SSH connection
-  return session
-      ->openShell(params->ip, params->port, params->username, params->password)
-      .via(executor.get())
-      .thenValue([params, session](...) -> SemiFuture<shared_ptr<Cli>> {
-        MLOG(MDEBUG) << "[" << params->id
-                     << "] "
-                        "Setting flavour";
-        shared_ptr<CliFlavour> cl = params->flavour;
 
-        // create CLI
-        shared_ptr<PromptAwareCli> cli =
-            std::make_shared<PromptAwareCli>(session, cl);
-        MLOG(MDEBUG) << "[" << params->id
-                     << "] "
-                        "Initializing cli";
-        // initialize CLI
-        cli->initializeCli();
-        // resolve prompt needs to happen
-        MLOG(MDEBUG) << "[" << params->id
-                     << "] "
-                        "Resolving prompt";
-        cli->resolvePrompt();
-        MLOG(MDEBUG) << "[" << params->id
-                     << "] "
-                        "Creating async data reader";
-        event* sessionEvent = SshSocketReader::getInstance().addSshReader(
-            readCallback, session->getSshFd(), session.get());
-        session->setEvent(sessionEvent);
-        MLOG(MDEBUG) << "[" << params->id
-                     << "] "
-                        "SSH layer configured";
-        return cli;
-      });
+  MLOG(MDEBUG) << "[" << params->id
+               << "] "
+                  "Opening shell";
+  // TODO: do this using future chaining
+  session
+      ->openShell(params->ip, params->port, params->username, params->password)
+      .get();
+
+  MLOG(MDEBUG) << "[" << params->id
+               << "] "
+                  "Setting flavour";
+  shared_ptr<CliFlavour> cl = params->flavour;
+  // create CLI
+  shared_ptr<PromptAwareCli> cli =
+      std::make_shared<PromptAwareCli>(session, cl);
+  MLOG(MDEBUG) << "[" << params->id
+               << "] "
+                  "Initializing cli";
+  // initialize CLI
+  // TODO: do this using future chaining:
+  //  via(executor.get())
+  //      .thenValue([params, cli, session](...) -> SemiFuture<shared_ptr<Cli>>
+  //      {
+
+  cli->initializeCli();
+  // resolve prompt needs to happen
+  MLOG(MDEBUG) << "[" << params->id
+               << "] "
+                  "Resolving prompt";
+  // TODO: do this using future chaining
+  cli->resolvePrompt();
+
+  MLOG(MDEBUG) << "[" << params->id
+               << "] "
+                  "Creating async data reader";
+  event* sessionEvent = SshSocketReader::getInstance().addSshReader(
+      readCallback, session->getSshFd(), session.get());
+  session->setEvent(sessionEvent);
+  MLOG(MDEBUG) << "[" << params->id
+               << "] "
+                  "SSH layer configured";
+  return makeFuture(cli);
 }
 
 } // namespace cli
