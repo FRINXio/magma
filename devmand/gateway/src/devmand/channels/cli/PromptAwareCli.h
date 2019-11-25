@@ -42,9 +42,9 @@ class PromptAwareCli : public Cli {
       const string password);
   void resolvePrompt();
   void initializeCli();
-  folly::Future<std::string> executeAndRead(const Command& cmd);
+  folly::Future<std::string> executeRead(const ReadCommand& cmd);
 
-  folly::Future<std::string> execute(const Command& cmd);
+  folly::Future<std::string> executeWrite(const WriteCommand& cmd);
 };
 
 } // namespace cli

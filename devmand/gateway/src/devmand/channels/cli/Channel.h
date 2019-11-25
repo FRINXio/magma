@@ -27,8 +27,8 @@ class Channel : public channels::Channel, public devmand::channels::cli::Cli {
   Channel(Channel&&) = delete;
   Channel& operator=(Channel&&) = delete;
 
-  folly::Future<std::string> executeAndRead(const Command& cmd) override;
-  folly::Future<std::string> execute(const Command& cmd) override;
+  folly::Future<std::string> executeRead(const ReadCommand& cmd) override;
+  folly::Future<std::string> executeWrite(const WriteCommand& cmd) override;
 
  private:
   string id;

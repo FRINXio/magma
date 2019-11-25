@@ -38,7 +38,7 @@ class StructuredUbntDeviceTest : public testing::Test {
 
 class UbntFakeCli : public Cli {
  public:
-  folly::Future<string> executeAndRead(const Command& cmd) override {
+  folly::Future<string> executeRead(const ReadCommand& cmd) override {
     (void)cmd;
     if (cmd.toString() == "show interfaces description") {
       return "\n"
@@ -129,7 +129,7 @@ class UbntFakeCli : public Cli {
     return "";
   }
 
-  folly::Future<string> execute(const Command& cmd) override {
+  folly::Future<string> executeWrite(const WriteCommand& cmd) override {
     (void)cmd;
     return folly::Future<string>("");
   }

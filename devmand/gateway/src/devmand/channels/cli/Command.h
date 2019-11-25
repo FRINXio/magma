@@ -19,14 +19,13 @@ namespace cli {
 /*
  * Command struct encapsulating a string to be executed on a device.
  */
+
 struct Command {
  public:
   Command() = delete;
-  static Command makeReadCommand(
-      const std::string& cmd,
-      bool skipCache = false);
 
- private:
+ public:
+ protected:
   explicit Command(std::string _command, bool skipCache);
 
  public:
@@ -53,6 +52,26 @@ struct Command {
  private:
   const string command;
   const bool skipCache_;
+};
+
+class WriteCommand : public Command {
+ public:
+  static WriteCommand create(const std::string& cmd, bool skipCache = false);
+
+  static WriteCommand create(const Command& cmd);
+
+ private:
+  WriteCommand(const string& command, bool skipCache);
+};
+
+class ReadCommand : public Command {
+ public:
+  static ReadCommand create(const std::string& cmd, bool skipCache = false);
+
+  static ReadCommand create(const Command& cmd);
+
+ private:
+  ReadCommand(const string& command, bool skipCache);
 };
 
 } // namespace cli

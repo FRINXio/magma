@@ -50,20 +50,20 @@ QueuedCli::~QueuedCli() {
                << "~QCli done";
 }
 
-Future<string> QueuedCli::executeAndRead(const Command& cmd) {
+Future<string> QueuedCli::executeRead(const ReadCommand& cmd) {
   boost::recursive_mutex::scoped_lock scoped_lock(mutex);
   return executeSomething(
-      cmd, "QCli.executeAndRead", [=]() { return cli->executeAndRead(cmd); });
+      cmd, "QCli.executeRead", [=]() { return cli->executeRead(cmd); });
 }
 
-Future<string> QueuedCli::execute(const Command& cmd) {
+Future<string> QueuedCli::executeWrite(const WriteCommand& cmd) {
   boost::recursive_mutex::scoped_lock scoped_lock(mutex);
   Command command = cmd;
   if (!command.isMultiCommand()) {
     MLOG(MWARNING) << "[" << id << "] "
-                   << "Called execute with a single command " << cmd
-                   << ", executeAndRead() should have been used";
-    return executeAndRead(command);
+                   << "Called executeWrite with a single command " << cmd
+                   << ", executeRead() should have been used";
+    return executeRead(ReadCommand::create(cmd)); // TODO what is appropriate?
   }
 
   const vector<Command>& commands = command.splitMultiCommand();
@@ -71,12 +71,13 @@ Future<string> QueuedCli::execute(const Command& cmd) {
 
   for (unsigned long i = 0; i < (commands.size() - 1); i++) {
     commmandsFutures.emplace_back(
-        executeSomething(commands.at(i), "QCli.execute", [=]() {
-          return cli->execute(commands.at(i));
+        executeSomething(commands.at(i), "QCli.executeWrite", [=]() {
+          return cli->executeWrite(WriteCommand::create(commands.at(i)));
         }));
   }
 
-  commmandsFutures.emplace_back(executeAndRead(commands.back()));
+  commmandsFutures.emplace_back(
+      executeRead(ReadCommand::create(commands.back())));
   Future<string> future = reduce(
       commmandsFutures.begin(),
       commmandsFutures.end(),

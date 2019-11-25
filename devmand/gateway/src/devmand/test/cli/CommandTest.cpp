@@ -29,7 +29,7 @@ class CommandTest : public ::testing::Test {
 
 TEST_F(CommandTest, api) {
   std::string foo("foo");
-  Command cmd = Command::makeReadCommand(foo);
+  ReadCommand cmd = ReadCommand::create(foo);
   EXPECT_EQ("foo", cmd.toString());
   foo.clear();
   EXPECT_EQ("foo", cmd.toString());
@@ -37,11 +37,11 @@ TEST_F(CommandTest, api) {
   EXPECT_EQ("foo", cmd.toString());
 
   const auto mockCli = std::make_shared<EchoCli>();
-  folly::Future<std::string> future = mockCli->executeAndRead(cmd);
+  folly::Future<std::string> future = mockCli->executeRead(cmd);
   EXPECT_EQ("foo", std::move(future).get());
 
   Channel cliChannel("cmdTEst", std::make_shared<EchoCli>());
-  folly::Future<std::string> futureFromChannel = cliChannel.executeAndRead(cmd);
+  folly::Future<std::string> futureFromChannel = cliChannel.executeRead(cmd);
   EXPECT_EQ("foo", std::move(futureFromChannel).get());
 }
 

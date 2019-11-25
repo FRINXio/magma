@@ -18,10 +18,12 @@ Command::Command(const std::string _command, bool skipCache)
     : command(_command), skipCache_(skipCache) {}
 
 // Factory methods
-Command Command::makeReadCommand(const std::string& cmd, bool skipCache) {
-  return Command(cmd, skipCache);
+ReadCommand ReadCommand::create(const std::string& cmd, bool skipCache) {
+  return ReadCommand(cmd, skipCache);
 }
-
+WriteCommand WriteCommand::create(const std::string& cmd, bool skipCache) {
+  return WriteCommand(cmd, skipCache);
+}
 static const char DELIMITER = '\n';
 
 bool Command::isMultiCommand() {
@@ -34,15 +36,27 @@ vector<Command> Command::splitMultiCommand() {
   string::size_type pos = 0;
   string::size_type prev = 0;
   while ((pos = str.find(DELIMITER, prev)) != std::string::npos) {
-    commands.emplace_back(
-        Command::makeReadCommand(str.substr(prev, pos - prev)));
+    commands.emplace_back(WriteCommand::create(str.substr(prev, pos - prev)));
     prev = pos + 1;
   }
 
-  commands.emplace_back(Command::makeReadCommand(str.substr(prev)));
+  commands.emplace_back(ReadCommand::create(str.substr(prev)));
   return commands;
 }
 
+ReadCommand::ReadCommand(const string& _command, bool _skipCache)
+    : Command(_command, _skipCache) {}
+
+ReadCommand ReadCommand::create(const Command& cmd) {
+  return create(cmd.toString(), cmd.skipCache());
+}
+
+WriteCommand::WriteCommand(const string& _command, bool _skipCache)
+    : Command(_command, _skipCache) {}
+
+WriteCommand WriteCommand::create(const Command& cmd) {
+  return create(cmd.toString(), cmd.skipCache());
+}
 } // namespace cli
 } // namespace channels
 } // namespace devmand
