@@ -22,6 +22,7 @@ using devmand::channels::cli::CliFlavour;
 using namespace std;
 
 using folly::IOThreadPoolExecutor;
+using folly::SemiFuture;
 
 static constexpr auto configKeepAliveIntervalSeconds =
     "keepAliveIntervalSeconds";
@@ -50,21 +51,11 @@ class IoConfigurationBuilder {
 
   shared_ptr<ConnectionParameters> connectionParameters;
 
-  shared_ptr<Cli> createAll(
-      function<shared_ptr<Cli>(
-          shared_ptr<folly::IOThreadPoolExecutor>,
-          shared_ptr<ConnectionParameters>)> underlyingCliLayerFactory,
-      shared_ptr<CliCache> commandCache);
+  shared_ptr<Cli> createAllUsingFactory(shared_ptr<CliCache> commandCache);
 
-  static shared_ptr<Cli> createSSH(
+  static Future<shared_ptr<Cli>> createPromptAwareCli(
       shared_ptr<folly::IOThreadPoolExecutor> executor,
       shared_ptr<ConnectionParameters> params);
-
-  static shared_ptr<Cli> getIo(
-      shared_ptr<ConnectionParameters> params,
-      shared_ptr<Cli> underlyingCliLayer,
-      shared_ptr<folly::ThreadWheelTimekeeper> timekeeper,
-      shared_ptr<CliCache> commandCache = ReadCachingCli::createCache());
 
   static chrono::seconds loadTimeout(
       const std::map<std::string, std::string>& plaintextCliKv,

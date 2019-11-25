@@ -64,8 +64,7 @@ static DeviceConfig getConfig(
   kvPairs.insert(std::make_pair("username", "root"));
   kvPairs.insert(std::make_pair("password", "root"));
   kvPairs.insert(std::make_pair(
-      configMaxCommandTimeoutSeconds,
-      to_string(commandTimeout.count()))); // count?
+      configMaxCommandTimeoutSeconds, to_string(commandTimeout.count())));
   chnlCfg.kvPairs = kvPairs;
   deviceConfig.channelConfigs.insert(std::make_pair("cli", chnlCfg));
   deviceConfig.ip = "localhost";
@@ -80,7 +79,7 @@ static void ensureConnected(const shared_ptr<Cli>& cli) {
     MLOG(MDEBUG) << "Testing connection attempt:" << attempts;
     try {
       const string& echoResult =
-          cli->executeAndRead(Command::makeReadCommand("echo 123", true)).get();
+          cli->executeRead(ReadCommand::create("echo 123", true)).get();
       EXPECT_EQ("123", boost::algorithm::trim_copy(echoResult));
       connected = true;
     } catch (const std::exception& e) {
@@ -104,7 +103,7 @@ TEST_F(ReconnectingSshTest, plaintextCliDevice) {
   EXPECT_THROW(
       {
         try {
-          cli->executeAndRead(Command::makeReadCommand(sleepCommand, true))
+          cli->executeRead(ReadCommand::create(sleepCommand, true))
               .get(); // timeout exception
         } catch (const std::exception& e) {
           EXPECT_STREQ("Timed out", e.what());

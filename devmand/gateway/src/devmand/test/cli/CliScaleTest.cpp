@@ -102,7 +102,7 @@ TEST_F(CliScaleTest, DISABLED_scale) {
     session->setEvent(sessionEvent);
     return QueuedCli::make(to_string(port), cli, executor);
   };
-  const Command& cmd = Command::makeReadCommand("show running-config");
+  const ReadCommand& cmd = ReadCommand::create("show running-config");
 
   {
     std::chrono::steady_clock::time_point begin =
@@ -135,7 +135,7 @@ TEST_F(CliScaleTest, DISABLED_scale) {
       for (int req = 0; req < REQUESTS; req++) {
         MLOG(MWARNING) << "Invoking device: " << START_PORT + device
                        << " request: " << req;
-        requests.push_back(move(clis[device]->executeAndRead(cmd)));
+        requests.push_back(move(clis[device]->executeRead(cmd)));
       }
     }
 

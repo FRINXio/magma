@@ -73,8 +73,7 @@ TEST_F(RealCliDeviceTest, DISABLED_ubiquiti) {
 
     output = stateResult.getDefault(kvPairs.at("stateCommand"), "").asString();
     if (i > 20) {
-      FAIL()
-          << "Unable to execute command, probably not connected, last state: ";
+      FAIL() << "Unable to execute command, probably not connected";
     }
   } while (output.empty());
   EXPECT_EQ("No ACLs are configured", boost::algorithm::trim_copy(output));

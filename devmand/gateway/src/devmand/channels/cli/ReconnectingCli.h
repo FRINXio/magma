@@ -31,27 +31,27 @@ class ReconnectingCli : public Cli,
   static shared_ptr<ReconnectingCli> make(
       string id,
       shared_ptr<Executor> executor,
-      function<shared_ptr<Cli>()>&& createCliStack,
+      function<SemiFuture<shared_ptr<Cli>>()>&& createCliStack,
       shared_ptr<Timekeeper> timekeeper,
       chrono::milliseconds quietPeriod = chrono::seconds(5));
 
   ~ReconnectingCli() override;
 
-  folly::Future<std::string> executeAndRead(const Command& cmd) override;
+  folly::Future<std::string> executeRead(const ReadCommand& cmd) override;
 
-  folly::Future<std::string> execute(const Command& cmd) override;
+  folly::Future<std::string> executeWrite(const WriteCommand& cmd) override;
 
  private:
   struct ReconnectParameters {
     string id;
 
-    atomic<bool> isReconnecting;
+    atomic<bool> isReconnecting; // TODO: merge with maybeCli
 
     atomic<bool> shutdown;
 
     shared_ptr<Executor> executor;
 
-    function<shared_ptr<Cli>()> createCliStack;
+    function<SemiFuture<shared_ptr<Cli>>()> createCliStack;
 
     mutex cliMutex;
 
@@ -68,7 +68,7 @@ class ReconnectingCli : public Cli,
   ReconnectingCli(
       string id,
       shared_ptr<Executor> executor,
-      function<shared_ptr<Cli>()>&& createCliStack,
+      function<SemiFuture<shared_ptr<Cli>>()>&& createCliStack,
       shared_ptr<Timekeeper> timekeeper,
       chrono::milliseconds quietPeriod);
 

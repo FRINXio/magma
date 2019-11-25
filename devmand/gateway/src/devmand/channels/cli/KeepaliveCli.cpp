@@ -21,7 +21,7 @@ shared_ptr<KeepaliveCli> KeepaliveCli::make(
     shared_ptr<folly::Executor> parentExecutor,
     shared_ptr<folly::ThreadWheelTimekeeper> timekeeper,
     chrono::milliseconds heartbeatInterval,
-    Command&& keepAliveCommand,
+    ReadCommand&& keepAliveCommand,
     chrono::milliseconds backoffAfterKeepaliveTimeout) {
   return shared_ptr<KeepaliveCli>(new KeepaliveCli(
       id,
@@ -39,7 +39,7 @@ KeepaliveCli::KeepaliveCli(
     shared_ptr<Executor> _parentExecutor,
     shared_ptr<ThreadWheelTimekeeper> _timekeeper,
     chrono::milliseconds _heartbeatInterval,
-    Command&& _keepAliveCommand,
+    ReadCommand&& _keepAliveCommand,
     chrono::milliseconds _backoffAfterKeepaliveTimeout)
     : id(_id),
       cli(_cli),
@@ -79,7 +79,7 @@ void KeepaliveCli::sendKeepAliveCommand() {
           throw runtime_error("KACli: Shutting down");
         MLOG(MDEBUG) << "[" << dis->id << "] "
                      << "sendKeepAliveCommand executing keepalive command";
-        return dis->executeAndRead(dis->keepAliveCommand);
+        return dis->executeRead(dis->keepAliveCommand);
       });
 
   scheduleNextPing(move(result));
@@ -124,12 +124,12 @@ void KeepaliveCli::scheduleNextPing(Future<string> keepAliveCmdFuture) {
           });
 }
 
-Future<string> KeepaliveCli::executeAndRead(const Command& cmd) {
-  return cli->executeAndRead(cmd);
+Future<string> KeepaliveCli::executeRead(const ReadCommand& cmd) {
+  return cli->executeRead(cmd);
 }
 
-Future<string> KeepaliveCli::execute(const Command& cmd) {
-  return cli->execute(cmd);
+Future<string> KeepaliveCli::executeWrite(const WriteCommand& cmd) {
+  return cli->executeWrite(cmd);
 }
 
 } // namespace devmand::channels::cli
