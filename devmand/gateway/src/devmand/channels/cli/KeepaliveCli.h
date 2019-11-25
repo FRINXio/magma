@@ -30,15 +30,15 @@ class KeepaliveCli : public Cli, public enable_shared_from_this<KeepaliveCli> {
       shared_ptr<folly::Executor> parentExecutor,
       shared_ptr<folly::ThreadWheelTimekeeper> _timekeeper,
       chrono::milliseconds heartbeatInterval = defaultKeepaliveInterval,
-      Command&& keepAliveCommand = Command::makeReadCommand("\n", true),
+      ReadCommand&& keepAliveCommand = ReadCommand::create("\n", true),
       chrono::milliseconds backoffAfterKeepaliveTimeout = // TODO: remove
       chrono::seconds(5));
 
   ~KeepaliveCli() override;
 
-  folly::Future<string> executeAndRead(const Command& cmd) override;
+  folly::Future<string> executeRead(const ReadCommand& cmd) override;
 
-  folly::Future<string> execute(const Command& cmd) override;
+  folly::Future<string> executeWrite(const WriteCommand& cmd) override;
 
  private:
   string id;
@@ -46,7 +46,7 @@ class KeepaliveCli : public Cli, public enable_shared_from_this<KeepaliveCli> {
   shared_ptr<folly::ThreadWheelTimekeeper> timekeeper;
   shared_ptr<folly::Executor> parentExecutor;
   folly::Executor::KeepAlive<folly::SerialExecutor> serialExecutorKeepAlive;
-  const Command keepAliveCommand;
+  const ReadCommand keepAliveCommand;
   const chrono::milliseconds heartbeatInterval;
   const chrono::milliseconds backoffAfterKeepaliveTimeout;
   atomic<bool> shutdown;
@@ -57,7 +57,7 @@ class KeepaliveCli : public Cli, public enable_shared_from_this<KeepaliveCli> {
       shared_ptr<folly::Executor> parentExecutor,
       shared_ptr<folly::ThreadWheelTimekeeper> _timekeeper,
       chrono::milliseconds heartbeatInterval,
-      Command&& keepAliveCommand,
+      ReadCommand&& keepAliveCommand,
       chrono::milliseconds backoffAfterKeepaliveTimeout // TODO: remove
   );
 

@@ -29,7 +29,7 @@ void PromptAwareCli::initializeCli() {
   cliFlavour->initializer->initialize(session);
 }
 
-folly::Future<string> PromptAwareCli::executeAndRead(const Command& cmd) {
+folly::Future<string> PromptAwareCli::executeRead(const ReadCommand& cmd) {
   const string& command = cmd.toString();
 
   return session->write(command)
@@ -53,7 +53,8 @@ PromptAwareCli::PromptAwareCli(
     shared_ptr<CliFlavour> _cliFlavour)
     : session(_session), cliFlavour(_cliFlavour) {}
 
-folly::Future<std::string> PromptAwareCli::execute(const Command& cmd) {
+folly::Future<std::string> PromptAwareCli::executeWrite(
+    const WriteCommand& cmd) {
   const string& command = cmd.toString();
   return session->write(command)
       .thenValue([=](...) { return session->readUntilOutput(command); })

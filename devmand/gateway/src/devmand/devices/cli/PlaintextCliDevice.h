@@ -52,7 +52,7 @@ class PlaintextCliDevice : public Device {
 
  private:
   std::shared_ptr<Channel> channel;
-  const Command stateCommand;
+  const ReadCommand stateCommand;
   std::shared_ptr<CliCache> cmdCache;
 };
 

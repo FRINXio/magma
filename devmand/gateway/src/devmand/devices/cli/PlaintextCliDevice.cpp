@@ -49,7 +49,7 @@ PlaintextCliDevice::PlaintextCliDevice(
     const std::shared_ptr<CliCache> _cmdCache)
     : Device(application, id_, true),
       channel(_channel),
-      stateCommand(Command::makeReadCommand(_stateCommand)),
+      stateCommand(ReadCommand::create(_stateCommand)),
       cmdCache(_cmdCache) {}
 
 std::shared_ptr<State> PlaintextCliDevice::getState() {
@@ -60,7 +60,7 @@ std::shared_ptr<State> PlaintextCliDevice::getState() {
   cmdCache->wlock()->clear();
   auto state = State::make(*reinterpret_cast<MetricSink*>(&app), getId());
 
-  state->addRequest(channel->executeAndRead(stateCommand)
+  state->addRequest(channel->executeRead(stateCommand)
                         .thenValue([state, cmd = stateCommand](std::string v) {
                           state->setStatus(true);
                           state->update([&v, &cmd](auto& lockedState) {

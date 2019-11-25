@@ -52,14 +52,14 @@ TEST_F(QueuedCliTest, queuedCli) {
   // create requests
   vector<Command> cmds;
   for (const auto& str : results) {
-    cmds.push_back(Command::makeReadCommand(str));
+    cmds.push_back(ReadCommand::create(str));
   }
 
   // send requests
   vector<folly::Future<string>> futures;
   for (const auto& cmd : cmds) {
     MLOG(MDEBUG) << "Executing command '" << cmd;
-    futures.push_back(cli->executeAndRead(cmd));
+    futures.push_back(cli->executeRead(ReadCommand::create(cmd)));
   }
 
   // collect values
@@ -78,7 +78,7 @@ TEST_F(QueuedCliTest, queueOrderingTest) {
   unsigned int parallelThreads = 165;
   shared_ptr<CPUThreadPoolExecutor> queuedCliParallelExecutor =
       make_shared<CPUThreadPoolExecutor>(parallelThreads);
-  Command cmd = Command::makeReadCommand("1\n2\n3\n4\n5\n6\n7\n8\n9");
+  WriteCommand cmd = WriteCommand::create("1\n2\n3\n4\n5\n6\n7\n8\n9", true);
   const shared_ptr<QueuedCli>& cli =
       QueuedCli::make("testOrder", make_shared<EchoCli>(), executor);
 
@@ -87,7 +87,7 @@ TEST_F(QueuedCliTest, queueOrderingTest) {
   for (unsigned long i = 0; i < iterations; i++) {
     queuedFutures.emplace_back(folly::via(
         queuedCliParallelExecutor.get(),
-        [cli, cmd]() { return cli->execute(cmd); }));
+        [cli, cmd]() { return cli->executeWrite(cmd); }));
   }
 
   vector<string> output =
@@ -109,11 +109,11 @@ TEST_F(QueuedCliTest, queuedCliMT) {
 
   // create requests
   vector<folly::Future<string>> futures;
-  Command cmd = Command::makeReadCommand("hello");
+  ReadCommand cmd = ReadCommand::create("hello");
   for (int i = 0; i < loopcount; ++i) {
     MLOG(MDEBUG) << "Executing command '" << cmd;
     futures.push_back(
-        folly::via(executor.get(), [&]() { return cli->executeAndRead(cmd); }));
+        folly::via(executor.get(), [&]() { return cli->executeRead(cmd); }));
   }
 
   // collect values
@@ -138,7 +138,7 @@ TEST_F(QueuedCliTest, threadSafety) {
   vector<Future<string>> execs;
   for (int i = 0; i < iterations; i++) {
     Future<string> future = via(testExec.get(), [cli, i]() {
-      return cli->executeAndRead(Command::makeReadCommand(to_string(i))).get();
+      return cli->executeRead(ReadCommand::create(to_string(i))).get();
     });
     execs.push_back(std::move(future));
   }

@@ -21,8 +21,8 @@ using std::shared_ptr;
 using std::string;
 using CliCache = Synchronized<EvictingCacheMap<string, string>>;
 
-Future<string> devmand::channels::cli::ReadCachingCli::executeAndRead(
-    const Command& cmd) {
+Future<string> devmand::channels::cli::ReadCachingCli::executeRead(
+    const ReadCommand& cmd) {
   const string command = cmd.toString();
   if (!cmd.skipCache()) {
     Optional<string> cachedResult =
@@ -41,7 +41,7 @@ Future<string> devmand::channels::cli::ReadCachingCli::executeAndRead(
     }
   }
 
-  return cli->executeAndRead(cmd).thenValue([=](string output) {
+  return cli->executeRead(cmd).thenValue([=](string output) {
     cache->wlock()->insert(command, output);
     return output;
   });
@@ -53,9 +53,9 @@ devmand::channels::cli::ReadCachingCli::ReadCachingCli(
     const shared_ptr<CliCache>& _cache)
     : id(_id), cli(_cli), cache(_cache) {}
 
-Future<string> devmand::channels::cli::ReadCachingCli::execute(
-    const Command& cmd) {
-  return cli->execute(cmd);
+Future<string> devmand::channels::cli::ReadCachingCli::executeWrite(
+    const WriteCommand& cmd) {
+  return cli->executeWrite(cmd);
 }
 
 devmand::channels::cli::ReadCachingCli::~ReadCachingCli() {
