@@ -174,13 +174,13 @@ Future<shared_ptr<Cli>> IoConfigurationBuilder::createPromptAwareCli(
   //      .thenValue([params, cli, session](...) -> SemiFuture<shared_ptr<Cli>>
   //      {
 
-  cli->initializeCli();
+  cli->initializeCli().get();
   // resolve prompt needs to happen
   MLOG(MDEBUG) << "[" << params->id
                << "] "
                   "Resolving prompt";
   // TODO: do this using future chaining
-  cli->resolvePrompt();
+  cli->resolvePrompt().get();
 
   MLOG(MDEBUG) << "[" << params->id
                << "] "

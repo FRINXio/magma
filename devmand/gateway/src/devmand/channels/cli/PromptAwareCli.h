@@ -19,10 +19,13 @@ namespace cli {
 using devmand::channels::cli::CliInitializer;
 using devmand::channels::cli::PromptResolver;
 using devmand::channels::cli::sshsession::SshSessionAsync;
+using folly::SemiFuture;
+using folly::Unit;
 using std::shared_ptr;
 using std::string;
 
-class PromptAwareCli : public Cli {
+class PromptAwareCli : public Cli,
+                       public std::enable_shared_from_this<PromptAwareCli> {
  private:
   shared_ptr<SshSessionAsync> session;
   shared_ptr<CliFlavour> cliFlavour;
@@ -40,10 +43,9 @@ class PromptAwareCli : public Cli {
       const int port,
       const string username,
       const string password);
-  void resolvePrompt();
-  void initializeCli();
+  SemiFuture<Unit> resolvePrompt();
+  SemiFuture<Unit> initializeCli();
   folly::Future<std::string> executeRead(const ReadCommand cmd);
-
   folly::Future<std::string> executeWrite(const WriteCommand cmd);
 };
 

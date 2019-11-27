@@ -20,31 +20,35 @@ namespace devmand {
 namespace channels {
 namespace cli {
 
-void PromptAwareCli::resolvePrompt() {
-  this->prompt =
-      cliFlavour->resolver->resolvePrompt(session, cliFlavour->newline);
+SemiFuture<Unit> PromptAwareCli::resolvePrompt() {
+  return cliFlavour->resolver->resolvePrompt(session, cliFlavour->newline)
+      .thenValue([dis = shared_from_this()](string _prompt) {
+        dis->prompt = _prompt;
+      });
 }
 
-void PromptAwareCli::initializeCli() {
-  cliFlavour->initializer->initialize(session);
+SemiFuture<Unit> PromptAwareCli::initializeCli() {
+  return cliFlavour->initializer->initialize(session);
 }
 
 folly::Future<string> PromptAwareCli::executeRead(const ReadCommand cmd) {
   const string& command = cmd.toString();
 
   return session->write(command)
-      .thenValue([=](...) { return session->readUntilOutput(command); })
-      .thenValue([=](const string& output) {
+      .thenValue([dis = shared_from_this(), command](...) {
+        return dis->session->readUntilOutput(command);
+      })
+      .thenValue([dis = shared_from_this()](const string& output) {
         auto returnOutputParameter = [output](...) { return output; };
-        return session->write(cliFlavour->newline)
+        return dis->session->write(dis->cliFlavour->newline)
             .thenValue(returnOutputParameter);
       })
-      .thenValue([=](const string& output) {
+      .thenValue([dis = shared_from_this()](const string& output) {
         auto concatOutputParameter = [output](const string& readUntilOutput) {
           return output + readUntilOutput;
         };
-        return session->readUntilOutput(prompt).thenValue(
-            concatOutputParameter);
+        return dis->session->readUntilOutput(dis->prompt)
+            .thenValue(concatOutputParameter);
       });
 }
 
@@ -57,9 +61,11 @@ folly::Future<std::string> PromptAwareCli::executeWrite(
     const WriteCommand cmd) {
   const string& command = cmd.toString();
   return session->write(command)
-      .thenValue([=](...) { return session->readUntilOutput(command); })
-      .thenValue([=](const string& output) {
-        return session->write(cliFlavour->newline)
+      .thenValue([dis = shared_from_this(), command](...) {
+        return dis->session->readUntilOutput(command);
+      })
+      .thenValue([dis = shared_from_this(), command](const string& output) {
+        return dis->session->write(dis->cliFlavour->newline)
             .thenValue([output, command](...) { return output + command; });
       });
 }

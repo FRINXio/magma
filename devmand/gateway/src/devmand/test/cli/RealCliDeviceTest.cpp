@@ -42,7 +42,7 @@ class RealCliDeviceTest : public ::testing::Test {
   }
 };
 
-TEST_F(RealCliDeviceTest, ubiquiti) {
+TEST_F(RealCliDeviceTest, DISABLED_ubiquiti) {
   int i = 0;
   string output = "";
   Application app;
