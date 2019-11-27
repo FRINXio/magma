@@ -36,6 +36,11 @@ class KeepaliveCli : public Cli, public enable_shared_from_this<KeepaliveCli> {
 
   ~KeepaliveCli() override;
 
+  /*
+   * Must be called after constructor to kick start keepalive.
+   */
+  void start();
+
   folly::Future<string> executeRead(const ReadCommand cmd) override;
 
   folly::Future<string> executeWrite(const WriteCommand cmd) override;

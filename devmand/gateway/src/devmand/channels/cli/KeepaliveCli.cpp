@@ -132,4 +132,8 @@ Future<string> KeepaliveCli::executeWrite(const WriteCommand cmd) {
   return cli->executeWrite(cmd);
 }
 
+void KeepaliveCli::start() {
+  sendKeepAliveCommand();
+}
+
 } // namespace devmand::channels::cli

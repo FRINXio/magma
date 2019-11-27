@@ -136,6 +136,7 @@ shared_ptr<Cli> IoConfigurationBuilder::createAllUsingFactory(
       kaExecutor,
       timekeeper,
       connectionParameters->kaTimeout);
+  kaCli->start();
   return kaCli;
 }
 

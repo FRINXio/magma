@@ -11,6 +11,7 @@
 #include <boost/algorithm/string/trim.hpp>
 #include <devmand/Application.h>
 #include <devmand/channels/cli/IoConfigurationBuilder.h>
+#include <devmand/channels/cli/KeepaliveCli.h>
 #include <devmand/channels/cli/SshSessionAsync.h>
 #include <devmand/channels/cli/SshSocketReader.h>
 #include <devmand/channels/cli/TimeoutTrackingCli.h>
@@ -49,13 +50,13 @@ class ReconnectingSshTest : public ::testing::Test {
   }
 
   void TearDown() override {
-    // ssh->close();
   }
 };
 
 static DeviceConfig getConfig(
     string port,
-    std::chrono::seconds commandTimeout = defaultCommandTimeout) {
+    std::chrono::seconds commandTimeout = defaultCommandTimeout,
+    std::chrono::seconds keepaliveTimeout = defaultKeepaliveInterval) {
   DeviceConfig deviceConfig;
   ChannelConfig chnlCfg;
   std::map<std::string, std::string> kvPairs;
@@ -65,6 +66,8 @@ static DeviceConfig getConfig(
   kvPairs.insert(std::make_pair("password", "root"));
   kvPairs.insert(std::make_pair(
       configMaxCommandTimeoutSeconds, to_string(commandTimeout.count())));
+  kvPairs.insert(std::make_pair(
+      configKeepAliveIntervalSeconds, to_string(keepaliveTimeout.count())));
   chnlCfg.kvPairs = kvPairs;
   deviceConfig.channelConfigs.insert(std::make_pair("cli", chnlCfg));
   deviceConfig.ip = "localhost";
@@ -113,6 +116,18 @@ TEST_F(ReconnectingSshTest, plaintextCliDevice) {
       std::exception);
 
   ensureConnected(cli);
+}
+
+
+TEST_F(ReconnectingSshTest, keepalive) {
+  int cmdTimeout = 5;
+  int keepaliveTimeout = 10;
+  IoConfigurationBuilder ioConfigurationBuilder(
+      getConfig("22", std::chrono::seconds(cmdTimeout), std::chrono::seconds(keepaliveTimeout)));
+  shared_ptr<Cli> cli =
+      ioConfigurationBuilder.createAll(ReadCachingCli::createCache());
+  std::this_thread::sleep_for(std::chrono::seconds(20));
+  // TODO: check that keepalive was run, move to separate test
 }
 
 } // namespace cli
