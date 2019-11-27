@@ -50,13 +50,13 @@ QueuedCli::~QueuedCli() {
                << "~QCli done";
 }
 
-Future<string> QueuedCli::executeRead(const ReadCommand& cmd) {
+Future<string> QueuedCli::executeRead(const ReadCommand cmd) {
   boost::recursive_mutex::scoped_lock scoped_lock(mutex);
   return executeSomething(
       cmd, "QCli.executeRead", [=]() { return cli->executeRead(cmd); });
 }
 
-Future<string> QueuedCli::executeWrite(const WriteCommand& cmd) {
+Future<string> QueuedCli::executeWrite(const WriteCommand cmd) {
   boost::recursive_mutex::scoped_lock scoped_lock(mutex);
   Command command = cmd;
   if (!command.isMultiCommand()) {

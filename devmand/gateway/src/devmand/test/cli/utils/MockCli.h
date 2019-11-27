@@ -23,23 +23,23 @@ using namespace std;
 
 class EchoCli : public Cli {
  public:
-  folly::Future<string> executeRead(const ReadCommand& cmd) override {
+  folly::Future<string> executeRead(const ReadCommand cmd) override {
     return folly::Future<string>(cmd.toString());
   }
 
-  folly::Future<string> executeWrite(const WriteCommand& cmd) override {
+  folly::Future<string> executeWrite(const WriteCommand cmd) override {
     return folly::Future<string>(cmd.toString());
   }
 };
 
 class ErrCli : public Cli {
  public:
-  folly::Future<string> executeRead(const ReadCommand& cmd) override {
+  folly::Future<string> executeRead(const ReadCommand cmd) override {
     throw runtime_error(cmd.toString());
     return folly::Future<string>(runtime_error(cmd.toString()));
   }
 
-  folly::Future<string> executeWrite(const WriteCommand& cmd) override {
+  folly::Future<string> executeWrite(const WriteCommand cmd) override {
     throw runtime_error(cmd.toString());
     return folly::Future<string>(runtime_error(cmd.toString()));
   }
@@ -53,7 +53,7 @@ class AsyncCli : public Cli {
       vector<unsigned int> _durations)
       : cli(_cli), executor(_executor), durations(_durations), index(0) {}
 
-  folly::Future<string> executeRead(const ReadCommand& cmd) override {
+  folly::Future<string> executeRead(const ReadCommand cmd) override {
     folly::Future<string> f = via(executor.get()).thenValue([=](...) {
       unsigned int tis = durations[(index++) % durations.size()];
       this_thread::sleep_for(chrono::seconds(tis));
@@ -62,7 +62,7 @@ class AsyncCli : public Cli {
     return f;
   }
 
-  folly::Future<string> executeWrite(const WriteCommand& cmd) override {
+  folly::Future<string> executeWrite(const WriteCommand cmd) override {
     (void)cmd;
     return folly::Future<string>(runtime_error("Unsupported"));
   }

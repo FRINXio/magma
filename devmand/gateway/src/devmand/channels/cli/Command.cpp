@@ -51,12 +51,31 @@ ReadCommand ReadCommand::create(const Command& cmd) {
   return create(cmd.toString(), cmd.skipCache());
 }
 
+ReadCommand& ReadCommand::operator=(const ReadCommand& other) {
+  this->command = other.command;
+  this->skipCache_ = other.skipCache_;
+  return *this;
+}
+
+ReadCommand::ReadCommand(const ReadCommand& rc)
+    : Command(rc.toString(), rc.skipCache()) {}
+
 WriteCommand::WriteCommand(const string& _command, bool _skipCache)
     : Command(_command, _skipCache) {}
 
 WriteCommand WriteCommand::create(const Command& cmd) {
   return create(cmd.toString(), cmd.skipCache());
 }
+
+WriteCommand::WriteCommand(const WriteCommand& wc)
+    : Command(wc.toString(), wc.skipCache()) {}
+
+WriteCommand& WriteCommand::operator=(const WriteCommand& other) {
+  this->command = other.command;
+  this->skipCache_ = other.skipCache_;
+  return *this;
+}
+
 } // namespace cli
 } // namespace channels
 } // namespace devmand

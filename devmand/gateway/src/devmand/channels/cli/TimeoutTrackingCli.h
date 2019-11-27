@@ -38,9 +38,9 @@ class TimeoutTrackingCli : public Cli,
 
   ~TimeoutTrackingCli() override;
 
-  folly::Future<std::string> executeRead(const ReadCommand& cmd) override;
+  folly::Future<std::string> executeRead(const ReadCommand cmd) override;
 
-  folly::Future<std::string> executeWrite(const WriteCommand& cmd) override;
+  folly::Future<std::string> executeWrite(const WriteCommand cmd) override;
 
  private:
   string id;
