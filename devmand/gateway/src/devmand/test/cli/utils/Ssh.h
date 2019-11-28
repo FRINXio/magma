@@ -37,9 +37,18 @@ struct server {
   ssh_session session = nullptr;
   Future<Unit> serverFuture;
 
+  bool isConnected() {
+    return session != nullptr and ssh_is_connected(session);
+  }
+
   void close() {
     MLOG(MDEBUG) << "Closing server: " << id;
-    shutdown(ssh_bind_get_fd(sshbind), SHUT_RDWR);
+    if (session != nullptr) {
+      shutdown(ssh_get_fd(session), SHUT_RDWR);
+    }
+    if (sshbind != nullptr) {
+      shutdown(ssh_bind_get_fd(sshbind), SHUT_RDWR);
+    }
 
     // Make sure the server thread finished before calling free
     move(serverFuture).wait();

@@ -237,11 +237,6 @@ shared_ptr<server> startSshServer(
               handleCommand(chan, allInput);
               ssh_channel_write(
                   chan, prompt.c_str(), uint32_t(prompt.length()));
-            } else if (((int)buf[0]) == 3) {
-              // CTRL C
-              MLOG(MDEBUG) << "Quitting on ^C";
-              ssh_disconnect(retVal->session);
-              return;
             } else {
               wasEnter = false;
               ssh_channel_write(chan, buf, uint32_t(i));

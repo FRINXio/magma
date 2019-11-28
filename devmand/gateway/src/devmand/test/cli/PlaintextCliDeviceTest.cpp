@@ -77,6 +77,8 @@ static DeviceConfig getConfig(string port) {
   kvPairs.insert(make_pair("port", port));
   kvPairs.insert(make_pair("username", "root"));
   kvPairs.insert(make_pair("password", "root"));
+  kvPairs.insert(make_pair("keepAliveIntervalSeconds", "60"));
+  kvPairs.insert(make_pair("maxCommandTimeoutSeconds", "60"));
   chnlCfg.kvPairs = kvPairs;
   deviceConfig.channelConfigs.insert(make_pair("cli", chnlCfg));
   deviceConfig.ip = "localhost";
