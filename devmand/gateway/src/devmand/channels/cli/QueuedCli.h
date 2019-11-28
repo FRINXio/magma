@@ -69,8 +69,8 @@ class QueuedCli : public Cli, public enable_shared_from_this<QueuedCli> {
 
   ~QueuedCli() override;
 
-  Future<string> executeRead(const ReadCommand& cmd) override;
+  Future<string> executeRead(const ReadCommand cmd) override;
 
-  Future<string> executeWrite(const WriteCommand& cmd) override;
+  Future<string> executeWrite(const WriteCommand cmd) override;
 };
 } // namespace devmand::channels::cli

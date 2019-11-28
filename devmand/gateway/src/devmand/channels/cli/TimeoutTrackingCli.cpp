@@ -50,13 +50,13 @@ TimeoutTrackingCli::~TimeoutTrackingCli() {
                << "~TTCli done";
 }
 
-Future<string> TimeoutTrackingCli::executeRead(const ReadCommand& cmd) {
+Future<string> TimeoutTrackingCli::executeRead(const ReadCommand cmd) {
   return executeSomething(cmd, "TTCli.executeRead", [this, cmd]() {
     return cli->executeRead(cmd);
   });
 }
 
-Future<string> TimeoutTrackingCli::executeWrite(const WriteCommand& cmd) {
+Future<string> TimeoutTrackingCli::executeWrite(const WriteCommand cmd) {
   return executeSomething(cmd, "TTCli.executeWrite", [this, cmd]() {
     return cli->executeWrite(cmd);
   });

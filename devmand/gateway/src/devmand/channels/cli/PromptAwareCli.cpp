@@ -31,7 +31,7 @@ SemiFuture<Unit> PromptAwareCli::initializeCli() {
   return cliFlavour->initializer->initialize(session);
 }
 
-folly::Future<string> PromptAwareCli::executeRead(const ReadCommand& cmd) {
+folly::Future<string> PromptAwareCli::executeRead(const ReadCommand cmd) {
   const string& command = cmd.toString();
 
   return session->write(command)
@@ -58,7 +58,7 @@ PromptAwareCli::PromptAwareCli(
     : session(_session), cliFlavour(_cliFlavour) {}
 
 folly::Future<std::string> PromptAwareCli::executeWrite(
-    const WriteCommand& cmd) {
+    const WriteCommand cmd) {
   const string& command = cmd.toString();
   return session->write(command)
       .thenValue([dis = shared_from_this(), command](...) {

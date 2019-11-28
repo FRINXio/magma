@@ -22,7 +22,7 @@ using std::string;
 using CliCache = Synchronized<EvictingCacheMap<string, string>>;
 
 Future<string> devmand::channels::cli::ReadCachingCli::executeRead(
-    const ReadCommand& cmd) {
+    const ReadCommand cmd) {
   const string command = cmd.toString();
   if (!cmd.skipCache()) {
     Optional<string> cachedResult =
@@ -54,7 +54,7 @@ devmand::channels::cli::ReadCachingCli::ReadCachingCli(
     : id(_id), cli(_cli), cache(_cache) {}
 
 Future<string> devmand::channels::cli::ReadCachingCli::executeWrite(
-    const WriteCommand& cmd) {
+    const WriteCommand cmd) {
   return cli->executeWrite(cmd);
 }
 

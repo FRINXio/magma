@@ -36,9 +36,9 @@ class KeepaliveCli : public Cli, public enable_shared_from_this<KeepaliveCli> {
 
   ~KeepaliveCli() override;
 
-  folly::Future<string> executeRead(const ReadCommand& cmd) override;
+  folly::Future<string> executeRead(const ReadCommand cmd) override;
 
-  folly::Future<string> executeWrite(const WriteCommand& cmd) override;
+  folly::Future<string> executeWrite(const WriteCommand cmd) override;
 
  private:
   string id;

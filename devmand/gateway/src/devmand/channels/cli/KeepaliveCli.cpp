@@ -124,11 +124,11 @@ void KeepaliveCli::scheduleNextPing(Future<string> keepAliveCmdFuture) {
           });
 }
 
-Future<string> KeepaliveCli::executeRead(const ReadCommand& cmd) {
+Future<string> KeepaliveCli::executeRead(const ReadCommand cmd) {
   return cli->executeRead(cmd);
 }
 
-Future<string> KeepaliveCli::executeWrite(const WriteCommand& cmd) {
+Future<string> KeepaliveCli::executeWrite(const WriteCommand cmd) {
   return cli->executeWrite(cmd);
 }
 

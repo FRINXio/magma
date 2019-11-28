@@ -108,8 +108,7 @@ void ReconnectingCli::triggerReconnect(shared_ptr<ReconnectParameters> params) {
   }
 }
 
-Future<string> ReconnectingCli::executeRead(
-    const ReadCommand& cmd) { // TODO: cmd lifetime
+Future<string> ReconnectingCli::executeRead(const ReadCommand cmd) {
   // capturing this is ok here - lambda is evaluated synchronously
   return executeSomething(
       "RCli.executeRead",
@@ -117,7 +116,7 @@ Future<string> ReconnectingCli::executeRead(
       cmd.toString());
 }
 
-Future<string> ReconnectingCli::executeWrite(const WriteCommand& cmd) {
+Future<string> ReconnectingCli::executeWrite(const WriteCommand cmd) {
   // capturing this is ok here - lambda is evaluated synchronously
   return executeSomething(
       "RCli.executeWrite",

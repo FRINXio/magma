@@ -20,19 +20,18 @@ namespace cli {
  * Command struct encapsulating a string to be executed on a device.
  */
 
-struct Command {
- public:
-  Command() = delete;
-
- public:
+class Command {
  protected:
   explicit Command(std::string _command, bool skipCache);
+  string command;
+  bool skipCache_;
 
  public:
+  Command() = delete;
   bool isMultiCommand();
   vector<Command> splitMultiCommand();
 
-  std::string toString() const {
+  string toString() const {
     return command; // TODO serialize so that newlines are escaped
   }
 
@@ -44,14 +43,6 @@ struct Command {
     _stream << c.toString();
     return _stream;
   }
-
-  Command operator=(Command other) {
-    return Command(other.toString(), other.skipCache());
-  }
-
- private:
-  const string command;
-  const bool skipCache_;
 };
 
 class WriteCommand : public Command {
@@ -59,6 +50,10 @@ class WriteCommand : public Command {
   static WriteCommand create(const std::string& cmd, bool skipCache = false);
 
   static WriteCommand create(const Command& cmd);
+
+  WriteCommand(const WriteCommand& wc);
+
+  WriteCommand& operator=(const WriteCommand& other);
 
  private:
   WriteCommand(const string& command, bool skipCache);
@@ -69,6 +64,9 @@ class ReadCommand : public Command {
   static ReadCommand create(const std::string& cmd, bool skipCache = false);
 
   static ReadCommand create(const Command& cmd);
+  ReadCommand& operator=(const ReadCommand& other);
+
+  ReadCommand(const ReadCommand& rc);
 
  private:
   ReadCommand(const string& command, bool skipCache);

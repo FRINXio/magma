@@ -35,7 +35,7 @@ class ReadCachingCli : public Cli {
   ~ReadCachingCli() override;
 
   static shared_ptr<CliCache> createCache();
-  Future<string> executeRead(const ReadCommand& cmd) override;
-  Future<string> executeWrite(const WriteCommand& cmd) override;
+  Future<string> executeRead(const ReadCommand cmd) override;
+  Future<string> executeWrite(const WriteCommand cmd) override;
 };
 } // namespace devmand::channels::cli
