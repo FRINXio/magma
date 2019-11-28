@@ -30,11 +30,11 @@ class CommandTest : public ::testing::Test {
 TEST_F(CommandTest, api) {
   std::string foo("foo");
   ReadCommand cmd = ReadCommand::create(foo);
-  EXPECT_EQ("foo", cmd.toString());
+  EXPECT_EQ("foo", cmd.raw());
   foo.clear();
-  EXPECT_EQ("foo", cmd.toString());
-  cmd.toString().clear();
-  EXPECT_EQ("foo", cmd.toString());
+  EXPECT_EQ("foo", cmd.raw());
+  cmd.raw().clear();
+  EXPECT_EQ("foo", cmd.raw());
 
   const auto mockCli = std::make_shared<EchoCli>();
   folly::Future<std::string> future = mockCli->executeRead(cmd);

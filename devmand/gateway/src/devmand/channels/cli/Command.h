@@ -32,7 +32,7 @@ class Command {
   bool isMultiCommand();
   vector<Command> splitMultiCommand();
 
-  string toString() const {
+  string raw() const {
     return command;
   }
 
@@ -41,7 +41,7 @@ class Command {
   }
 
   friend std::ostream& operator<<(std::ostream& _stream, Command const& c) {
-    auto rawCmd = c.toString();
+    auto rawCmd = c.raw();
     boost::replace_all(rawCmd, "\n", "\\n");
     boost::replace_all(rawCmd, "\r", "\\r");
     boost::replace_all(rawCmd, "\t", "\\t");

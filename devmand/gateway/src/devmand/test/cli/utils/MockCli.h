@@ -24,24 +24,24 @@ using namespace std;
 class EchoCli : public Cli {
  public:
   folly::Future<string> executeRead(const ReadCommand cmd) override {
-    return folly::Future<string>(cmd.toString());
+    return folly::Future<string>(cmd.raw());
   }
 
   folly::Future<string> executeWrite(const WriteCommand cmd) override {
-    return folly::Future<string>(cmd.toString());
+    return folly::Future<string>(cmd.raw());
   }
 };
 
 class ErrCli : public Cli {
  public:
   folly::Future<string> executeRead(const ReadCommand cmd) override {
-    throw runtime_error(cmd.toString());
-    return folly::Future<string>(runtime_error(cmd.toString()));
+    throw runtime_error(cmd.raw());
+    return folly::Future<string>(runtime_error(cmd.raw()));
   }
 
   folly::Future<string> executeWrite(const WriteCommand cmd) override {
-    throw runtime_error(cmd.toString());
-    return folly::Future<string>(runtime_error(cmd.toString()));
+    throw runtime_error(cmd.raw());
+    return folly::Future<string>(runtime_error(cmd.raw()));
   }
 };
 

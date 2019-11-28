@@ -113,7 +113,7 @@ Future<string> ReconnectingCli::executeRead(const ReadCommand cmd) {
   return executeSomething(
       "RCli.executeRead",
       [cmd](shared_ptr<Cli> cli) { return cli->executeRead(cmd); },
-      cmd.toString());
+      cmd.raw());
 }
 
 Future<string> ReconnectingCli::executeWrite(const WriteCommand cmd) {
@@ -121,7 +121,7 @@ Future<string> ReconnectingCli::executeWrite(const WriteCommand cmd) {
   return executeSomething(
       "RCli.executeWrite",
       [cmd](shared_ptr<Cli> cli) { return cli->executeWrite(cmd); },
-      cmd.toString());
+      cmd.raw());
 }
 
 Future<string> ReconnectingCli::executeSomething(

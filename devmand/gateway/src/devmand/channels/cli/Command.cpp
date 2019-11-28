@@ -48,7 +48,7 @@ ReadCommand::ReadCommand(const string& _command, bool _skipCache)
     : Command(_command, _skipCache) {}
 
 ReadCommand ReadCommand::create(const Command& cmd) {
-  return create(cmd.toString(), cmd.skipCache());
+  return create(cmd.raw(), cmd.skipCache());
 }
 
 ReadCommand& ReadCommand::operator=(const ReadCommand& other) {
@@ -58,17 +58,17 @@ ReadCommand& ReadCommand::operator=(const ReadCommand& other) {
 }
 
 ReadCommand::ReadCommand(const ReadCommand& rc)
-    : Command(rc.toString(), rc.skipCache()) {}
+    : Command(rc.raw(), rc.skipCache()) {}
 
 WriteCommand::WriteCommand(const string& _command, bool _skipCache)
     : Command(_command, _skipCache) {}
 
 WriteCommand WriteCommand::create(const Command& cmd) {
-  return create(cmd.toString(), cmd.skipCache());
+  return create(cmd.raw(), cmd.skipCache());
 }
 
 WriteCommand::WriteCommand(const WriteCommand& wc)
-    : Command(wc.toString(), wc.skipCache()) {}
+    : Command(wc.raw(), wc.skipCache()) {}
 
 WriteCommand& WriteCommand::operator=(const WriteCommand& other) {
   this->command = other.command;

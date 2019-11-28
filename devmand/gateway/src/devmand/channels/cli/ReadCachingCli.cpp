@@ -26,10 +26,10 @@ Future<string> devmand::channels::cli::ReadCachingCli::executeRead(
   if (!cmd.skipCache()) {
     Optional<string> cachedResult =
         cache->withWLock([cmd, this](auto& cache_) -> Optional<string> {
-          if (cache_.exists(cmd.toString())) {
+          if (cache_.exists(cmd.raw())) {
             MLOG(MDEBUG) << "[" << id << "] "
                          << "Found command: " << cmd << " in cache";
-            return Optional<string>(cache_.get(cmd.toString()));
+            return Optional<string>(cache_.get(cmd.raw()));
           } else {
             return Optional<string>(folly::none);
           }
@@ -41,7 +41,7 @@ Future<string> devmand::channels::cli::ReadCachingCli::executeRead(
   }
 
   return cli->executeRead(cmd).thenValue([=](string output) {
-    cache->wlock()->insert(cmd.toString(), output);
+    cache->wlock()->insert(cmd.raw(), output);
     return output;
   });
 }

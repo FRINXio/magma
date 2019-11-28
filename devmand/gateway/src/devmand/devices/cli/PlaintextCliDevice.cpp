@@ -64,7 +64,7 @@ std::shared_ptr<State> PlaintextCliDevice::getState() {
                         .thenValue([state, cmd = stateCommand](std::string v) {
                           state->setStatus(true);
                           state->update([&v, &cmd](auto& lockedState) {
-                            lockedState[cmd.toString()] = v;
+                            lockedState[cmd.raw()] = v;
                           });
                         })
                         .thenError(
