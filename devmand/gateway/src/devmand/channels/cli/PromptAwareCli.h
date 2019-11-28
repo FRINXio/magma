@@ -44,7 +44,7 @@ class PromptAwareCli : public Cli,
       const string username,
       const string password);
   SemiFuture<Unit> resolvePrompt();
-  SemiFuture<Unit> initializeCli();
+  SemiFuture<Unit> initializeCli(const string secret);
   folly::Future<std::string> executeRead(const ReadCommand cmd);
   folly::Future<std::string> executeWrite(const WriteCommand cmd);
 };

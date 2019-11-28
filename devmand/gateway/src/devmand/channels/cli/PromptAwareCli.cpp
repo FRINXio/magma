@@ -27,8 +27,8 @@ SemiFuture<Unit> PromptAwareCli::resolvePrompt() {
       });
 }
 
-SemiFuture<Unit> PromptAwareCli::initializeCli() {
-  return cliFlavour->initializer->initialize(session);
+SemiFuture<Unit> PromptAwareCli::initializeCli(const string secret) {
+  return cliFlavour->initializer->initialize(session, secret);
 }
 
 folly::Future<string> PromptAwareCli::executeRead(const ReadCommand cmd) {

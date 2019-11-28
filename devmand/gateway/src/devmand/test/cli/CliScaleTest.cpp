@@ -93,7 +93,7 @@ TEST_F(CliScaleTest, DISABLED_scale) {
     const shared_ptr<PromptAwareCli>& cli =
         std::make_shared<PromptAwareCli>(session, cl);
 
-    cli->initializeCli();
+    cli->initializeCli("cisco");
     cli->resolvePrompt();
     event* sessionEvent = SshSocketReader::getInstance().addSshReader(
         readCallback, session->getSshFd(), session.get());

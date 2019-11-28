@@ -35,8 +35,7 @@ class PromptResolver {
   virtual ~PromptResolver() = default;
 };
 
-class DefaultPromptResolver
-    : public PromptResolver {
+class DefaultPromptResolver : public PromptResolver {
  private:
   Future<folly::Optional<string>> resolvePromptAsync(
       shared_ptr<SshSessionAsync> session,
@@ -57,18 +56,24 @@ class DefaultPromptResolver
 class CliInitializer {
  public:
   virtual ~CliInitializer() = default;
-  virtual SemiFuture<Unit> initialize(shared_ptr<SshSessionAsync> session) = 0;
+  virtual SemiFuture<Unit> initialize(
+      shared_ptr<SshSessionAsync> session,
+      string secret) = 0;
 };
 
 class EmptyInitializer : public CliInitializer {
  public:
-  SemiFuture<Unit> initialize(shared_ptr<SshSessionAsync> session) override;
+  SemiFuture<Unit> initialize(
+      shared_ptr<SshSessionAsync> session,
+      string secret) override;
   ~EmptyInitializer() override = default;
 };
 
 class UbiquitiInitializer : public CliInitializer {
  public:
-  SemiFuture<Unit> initialize(shared_ptr<SshSessionAsync> session) override;
+  SemiFuture<Unit> initialize(
+      shared_ptr<SshSessionAsync> session,
+      string secret) override;
   ~UbiquitiInitializer() override = default;
 };
 

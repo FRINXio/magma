@@ -26,15 +26,19 @@ using folly::Optional;
 static const int DEFAULT_MILLIS = 1000;
 
 SemiFuture<Unit> EmptyInitializer::initialize(
-    shared_ptr<SshSessionAsync> session) {
+    shared_ptr<SshSessionAsync> session,
+    string secret) {
   (void)session;
+  (void)secret;
   return folly::makeFuture();
 }
 
 SemiFuture<Unit> UbiquitiInitializer::initialize(
-    shared_ptr<SshSessionAsync> session) {
+    shared_ptr<SshSessionAsync> session,
+    string secret) {
   return session->write("enable\n")
-      .thenValue([session](...) { return session->write("ubnt\n"); })
+      .thenValue(
+          [session, secret](...) { return session->write(secret + "\n"); })
       .thenValue(
           [session](...) { return session->write("terminal length 0\n"); });
 }
@@ -45,9 +49,7 @@ Future<string> DefaultPromptResolver::resolvePrompt(
   return session
       ->read(DEFAULT_MILLIS) // clear input, converges faster on
                              // prompt
-      .thenValue([=](...) {
-        return resolvePrompt(session, newline, 1);
-      });
+      .thenValue([=](...) { return resolvePrompt(session, newline, 1); });
 }
 
 Future<string> DefaultPromptResolver::resolvePrompt(
@@ -55,8 +57,7 @@ Future<string> DefaultPromptResolver::resolvePrompt(
     const string& newline,
     int delayCounter) {
   return resolvePromptAsync(session, newline, delayCounter)
-      .thenValue([=](
-                     Optional<string> prompt) {
+      .thenValue([=](Optional<string> prompt) {
         if (!prompt.hasValue()) {
           return resolvePrompt(session, newline, delayCounter + 1);
         } else {
