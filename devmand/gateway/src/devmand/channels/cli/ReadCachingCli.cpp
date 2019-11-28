@@ -23,14 +23,13 @@ using CliCache = Synchronized<EvictingCacheMap<string, string>>;
 
 Future<string> devmand::channels::cli::ReadCachingCli::executeRead(
     const ReadCommand cmd) {
-  const string command = cmd.toString();
   if (!cmd.skipCache()) {
     Optional<string> cachedResult =
-        cache->withWLock([command, this](auto& cache_) -> Optional<string> {
-          if (cache_.exists(command)) {
+        cache->withWLock([cmd, this](auto& cache_) -> Optional<string> {
+          if (cache_.exists(cmd.toString())) {
             MLOG(MDEBUG) << "[" << id << "] "
-                         << "Found command: " << command << " in cache";
-            return Optional<string>(cache_.get(command));
+                         << "Found command: " << cmd << " in cache";
+            return Optional<string>(cache_.get(cmd.toString()));
           } else {
             return Optional<string>(folly::none);
           }
@@ -42,7 +41,7 @@ Future<string> devmand::channels::cli::ReadCachingCli::executeRead(
   }
 
   return cli->executeRead(cmd).thenValue([=](string output) {
-    cache->wlock()->insert(command, output);
+    cache->wlock()->insert(cmd.toString(), output);
     return output;
   });
 }

@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <boost/algorithm/string/replace.hpp>
 #include <folly/futures/Future.h>
 #include <iostream>
 
@@ -32,7 +33,7 @@ class Command {
   vector<Command> splitMultiCommand();
 
   string toString() const {
-    return command; // TODO serialize so that newlines are escaped
+    return command;
   }
 
   bool skipCache() const {
@@ -40,7 +41,11 @@ class Command {
   }
 
   friend std::ostream& operator<<(std::ostream& _stream, Command const& c) {
-    _stream << c.toString();
+    auto rawCmd = c.toString();
+    boost::replace_all(rawCmd, "\n", "\\n");
+    boost::replace_all(rawCmd, "\r", "\\r");
+    boost::replace_all(rawCmd, "\t", "\\t");
+    _stream << rawCmd;
     return _stream;
   }
 };
@@ -48,11 +53,9 @@ class Command {
 class WriteCommand : public Command {
  public:
   static WriteCommand create(const std::string& cmd, bool skipCache = false);
-
   static WriteCommand create(const Command& cmd);
 
   WriteCommand(const WriteCommand& wc);
-
   WriteCommand& operator=(const WriteCommand& other);
 
  private:
@@ -62,10 +65,9 @@ class WriteCommand : public Command {
 class ReadCommand : public Command {
  public:
   static ReadCommand create(const std::string& cmd, bool skipCache = false);
-
   static ReadCommand create(const Command& cmd);
-  ReadCommand& operator=(const ReadCommand& other);
 
+  ReadCommand& operator=(const ReadCommand& other);
   ReadCommand(const ReadCommand& rc);
 
  private:

@@ -35,7 +35,7 @@ class QueuedCli : public Cli, public enable_shared_from_this<QueuedCli> {
   struct QueueEntry {
     function<Future<string>()> obtainFutureFromCli;
     shared_ptr<Promise<string>> promise;
-    string command;
+    Command command = ReadCommand::create("");
     string loggingPrefix;
   };
 

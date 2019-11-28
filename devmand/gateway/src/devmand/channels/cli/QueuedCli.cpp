@@ -97,7 +97,7 @@ Future<string> QueuedCli::executeSomething(
   QueueEntry queueEntry;
   queueEntry.obtainFutureFromCli = move(innerFunc);
   queueEntry.promise = promise;
-  queueEntry.command = cmd.toString();
+  queueEntry.command = cmd;
   queueEntry.loggingPrefix = prefix;
   queue.enqueue(move(queueEntry));
   if (!isProcessing) {
