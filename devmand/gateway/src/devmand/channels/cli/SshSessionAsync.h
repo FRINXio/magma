@@ -71,6 +71,7 @@ class SshSessionAsync : public std::enable_shared_from_this<SshSessionAsync> {
   void processDataInBuffer();
   socket_t getSshFd();
   void matchExpectedOutput();
+  static void failCurrentRead(runtime_error e, shared_ptr<Promise<string>> ptr);
 };
 
 } // namespace sshsession

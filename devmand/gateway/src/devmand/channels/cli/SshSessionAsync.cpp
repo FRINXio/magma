@@ -47,6 +47,10 @@ SshSessionAsync::~SshSessionAsync() {
   while (reading.load()) {
     // waiting for any pending read to run out
   }
+
+  failCurrentRead(
+      runtime_error("Session is closed"), this->readingState.promise);
+
   MLOG(MDEBUG) << "~SshSessionAsync finished";
 }
 
@@ -108,19 +112,14 @@ void SshSessionAsync::readSshDataToBuffer() {
   });
 }
 
-using namespace std::chrono_literals;
-
 void SshSessionAsync::matchExpectedOutput() {
-  if (not this->session.isOpen()) {
-    throw std::runtime_error("Session is closed");
-  }
-
   if (not matchingExpectedOutput) { // we are not allowed to match unless
                                     // readUntilOutput is called because we
                                     // don't know against what to match
     return;
   }
   reading.store(true);
+
   while (this->readQueue.read_available() != 0) {
     string output;
     readQueue.pop(output);
@@ -140,6 +139,14 @@ void SshSessionAsync::matchExpectedOutput() {
 void SshSessionAsync::processDataInBuffer() {
   via(serialExecutor.get(),
       [dis = shared_from_this()] { dis->matchExpectedOutput(); });
+}
+
+void SshSessionAsync::failCurrentRead(
+    runtime_error e,
+    shared_ptr<Promise<string>> ptr) {
+  if (ptr != nullptr and !ptr->isFulfilled()) {
+    ptr->setException(folly::make_exception_wrapper<runtime_error>(e));
+  }
 }
 
 } // namespace sshsession
