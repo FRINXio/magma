@@ -40,6 +40,7 @@ void readCallback(evutil_socket_t fd, short, void* ptr);
 
 class SshSessionAsync : public std::enable_shared_from_this<SshSessionAsync> {
  private:
+  string id;
   shared_ptr<folly::Executor> executor;
   folly::Executor::KeepAlive<SerialExecutor> serialExecutor;
   SshSession session;

@@ -29,7 +29,8 @@ using std::unique_lock;
 SshSessionAsync::SshSessionAsync(
     string _id,
     shared_ptr<folly::Executor> _executor)
-    : executor(_executor),
+    : id(_id),
+      executor(_executor),
       serialExecutor(SerialExecutor::create(
           folly::Executor::getKeepAliveToken(_executor.get()))),
       session(_id),
@@ -128,8 +129,17 @@ void SshSessionAsync::matchExpectedOutput() {
     std::size_t found = this->readingState.outputSoFar.find(
         this->readingState.currentLastOutput);
     if (found != std::string::npos) {
-      // TODO check for any additional output after lastOutput
       string final = this->readingState.outputSoFar.substr(0, found);
+
+      // Check for any outstanding output
+      size_t consumedLength =
+          final.length() + this->readingState.currentLastOutput.length();
+      if (consumedLength < this->readingState.outputSoFar.length()) {
+        MLOG(MWARNING) << "[" << id << "] "
+                       << "Unexpected output from device: ("
+                       << this->readingState.outputSoFar.substr(consumedLength)
+                       << "). This output will be lost";
+      }
       matchingExpectedOutput.store(false);
       this->readingState.promise->setValue(final);
     }
