@@ -146,10 +146,9 @@ string SshSession::read(int timeoutMillis) {
 }
 
 void SshSession::write(const string& command) {
+  // If we are executing empty string, we can complete right away
+  // Why ? because keepalive is empty string
   if (command.empty()) {
-    MLOG(MERROR) << "[" << id << "] "
-                 << "Command for execution for host: " << sessionState.ip
-                 << " is empty, this should not happen";
     return;
   }
   const char* data = command.c_str();

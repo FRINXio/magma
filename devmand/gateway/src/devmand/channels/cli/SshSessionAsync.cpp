@@ -120,6 +120,13 @@ void SshSessionAsync::matchExpectedOutput() {
   }
   reading.store(true);
 
+  // If we are expecting empty string as output, we can complete right away
+  // Why ? because keepalive is empty string
+  if (this->readingState.currentLastOutput.empty()) {
+    matchingExpectedOutput.store(false);
+    this->readingState.promise->setValue("");
+  }
+
   while (this->readQueue.read_available() != 0) {
     string output;
     readQueue.pop(output);

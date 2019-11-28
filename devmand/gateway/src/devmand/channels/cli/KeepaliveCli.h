@@ -30,7 +30,7 @@ class KeepaliveCli : public Cli, public enable_shared_from_this<KeepaliveCli> {
       shared_ptr<folly::Executor> parentExecutor,
       shared_ptr<folly::ThreadWheelTimekeeper> _timekeeper,
       chrono::milliseconds heartbeatInterval = defaultKeepaliveInterval,
-      ReadCommand&& keepAliveCommand = ReadCommand::create("\n", true),
+      ReadCommand&& keepAliveCommand = ReadCommand::create("", true),
       chrono::milliseconds backoffAfterKeepaliveTimeout = // TODO: remove
       chrono::seconds(5));
 
