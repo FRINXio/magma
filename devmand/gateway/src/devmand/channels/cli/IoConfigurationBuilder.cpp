@@ -40,20 +40,24 @@ IoConfigurationBuilder::IoConfigurationBuilder(
     const DeviceConfig& deviceConfig) {
   const std::map<std::string, std::string>& plaintextCliKv =
       deviceConfig.channelConfigs.at("cli").kvPairs;
-  connectionParameters = make_shared<ConnectionParameters>();
-  connectionParameters->id = deviceConfig.id;
-  connectionParameters->ip = deviceConfig.ip;
-  connectionParameters->username = plaintextCliKv.at("username");
-  connectionParameters->password = plaintextCliKv.at("password");
-  connectionParameters->port = std::stoi(plaintextCliKv.at("port"));
-  connectionParameters->flavour =
+
+  connectionParameters = makeConnectionParameters(
+      deviceConfig.id,
+      deviceConfig.ip,
+      plaintextCliKv.at("username"),
+      plaintextCliKv.at("password"),
       plaintextCliKv.find("flavour") != plaintextCliKv.end()
-      ? CliFlavour::create(plaintextCliKv.at("flavour"))
-      : CliFlavour::create("");
-  connectionParameters->kaTimeout = loadTimeout(
-      plaintextCliKv, configKeepAliveIntervalSeconds, defaultKeepaliveInterval);
-  connectionParameters->cmdTimeout = loadTimeout(
-      plaintextCliKv, configMaxCommandTimeoutSeconds, defaultCommandTimeout);
+          ? plaintextCliKv.at("flavour")
+          : "",
+      std::stoi(plaintextCliKv.at("port")),
+      loadTimeout(
+          plaintextCliKv,
+          configKeepAliveIntervalSeconds,
+          defaultKeepaliveInterval),
+      loadTimeout(
+          plaintextCliKv,
+          configMaxCommandTimeoutSeconds,
+          defaultCommandTimeout));
 }
 
 IoConfigurationBuilder::~IoConfigurationBuilder() {
@@ -203,6 +207,30 @@ Future<shared_ptr<Cli>> IoConfigurationBuilder::createPromptAwareCli(
                << "] "
                   "SSH layer configured";
   return makeFuture(cli);
+}
+
+shared_ptr<IoConfigurationBuilder::ConnectionParameters>
+IoConfigurationBuilder::makeConnectionParameters(
+    string id,
+    string hostname,
+    string username,
+    string password,
+    string flavour,
+    int port,
+    chrono::seconds kaTimeout,
+    chrono::seconds cmdTimeout) {
+  shared_ptr<IoConfigurationBuilder::ConnectionParameters>
+      connectionParameters =
+          make_shared<IoConfigurationBuilder::ConnectionParameters>();
+  connectionParameters->id = id;
+  connectionParameters->ip = hostname;
+  connectionParameters->username = username;
+  connectionParameters->password = password;
+  connectionParameters->port = port;
+  connectionParameters->flavour = CliFlavour::create(flavour);
+  connectionParameters->kaTimeout = kaTimeout;
+  connectionParameters->cmdTimeout = cmdTimeout;
+  return connectionParameters;
 }
 
 } // namespace cli

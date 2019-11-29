@@ -9,22 +9,37 @@
 #include <magma_logging.h>
 
 #include <devmand/cartography/DeviceConfig.h>
+#include <devmand/channels/cli/Cli.h>
+#include <devmand/channels/cli/IoConfigurationBuilder.h>
 #include <devmand/channels/cli/TimeoutTrackingCli.h>
+#include <devmand/devices/Device.h>
 #include <devmand/test/cli/utils/Log.h>
 #include <devmand/test/cli/utils/MockCli.h>
 #include <devmand/test/cli/utils/Ssh.h>
-#include <folly/Executor.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
+#include <folly/executors/ThreadedExecutor.h>
+#include <folly/futures/ThreadWheelTimekeeper.h>
 #include <gtest/gtest.h>
+#include <atomic>
 #include <chrono>
 
 namespace devmand {
 namespace test {
 namespace cli {
 
-using namespace devmand::channels::cli;
 using namespace devmand::test::utils::cli;
 using namespace std;
+using namespace std::chrono_literals;
+using namespace devmand::channels::cli;
+using devmand::Application;
+using devmand::cartography::ChannelConfig;
+using devmand::cartography::DeviceConfig;
+using devmand::devices::Device;
+using devmand::devices::State;
+using devmand::test::utils::cli::AsyncCli;
+using devmand::test::utils::cli::EchoCli;
+using folly::CPUThreadPoolExecutor;
+using namespace devmand::test::utils::ssh;
 
 class TimeoutCliTest : public ::testing::Test {
  protected:
@@ -91,6 +106,35 @@ TEST_F(TimeoutCliTest, cleanDestructOnSuccess) {
   testedCli.reset();
 
   ASSERT_EQ(move(future).via(testExec.get()).get(10s), "returning");
+}
+
+TEST_F(TimeoutCliTest, DISABLED_cleanDestruct) {
+  shared_ptr<CPUThreadPoolExecutor> mockCliExecutor =
+      make_shared<CPUThreadPoolExecutor>(2);
+  vector<unsigned int> durations = {5};
+  auto delegate =
+      make_shared<AsyncCli>(make_shared<EchoCli>(), mockCliExecutor, durations);
+  shared_ptr<CPUThreadPoolExecutor> executor =
+      make_shared<CPUThreadPoolExecutor>(1);
+  shared_ptr<folly::ThreadWheelTimekeeper> timekeeper =
+      make_shared<folly::ThreadWheelTimekeeper>();
+  shared_ptr<TimeoutTrackingCli> cli =
+      TimeoutTrackingCli::make("test", delegate, timekeeper, executor, 1000ms);
+  Future<string> future =
+      cli->executeRead(ReadCommand::create("not returning"))
+          .via(mockCliExecutor.get())
+          .thenError(tag_t<FutureTimeout>{}, [](FutureTimeout const& e) {
+            MLOG(MDEBUG) << "Read completed with error: " << e.what();
+            return Future<string>(e);
+          });
+  executor.reset();
+  timekeeper.reset();
+  cli.reset();
+  // Wait for async session to finish
+  mockCliExecutor->join();
+  // Assert future finished
+  ASSERT_EQ(true, future.isReady());
+  ASSERT_EQ(true, future.hasException());
 }
 
 } // namespace cli

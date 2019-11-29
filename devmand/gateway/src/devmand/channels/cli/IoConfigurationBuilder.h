@@ -30,13 +30,6 @@ static constexpr auto configMaxCommandTimeoutSeconds =
     "maxCommandTimeoutSeconds";
 
 class IoConfigurationBuilder {
- public:
-  IoConfigurationBuilder(const DeviceConfig& deviceConfig);
-
-  ~IoConfigurationBuilder();
-
-  shared_ptr<Cli> createAll(shared_ptr<CliCache> commandCache);
-
  private:
   struct ConnectionParameters {
     string username;
@@ -49,13 +42,31 @@ class IoConfigurationBuilder {
     chrono::seconds cmdTimeout;
   };
 
-  shared_ptr<ConnectionParameters> connectionParameters;
+ public:
+  IoConfigurationBuilder(const DeviceConfig& deviceConfig);
 
-  shared_ptr<Cli> createAllUsingFactory(shared_ptr<CliCache> commandCache);
+  ~IoConfigurationBuilder();
+
+  shared_ptr<Cli> createAll(shared_ptr<CliCache> commandCache);
 
   static Future<shared_ptr<Cli>> createPromptAwareCli(
       shared_ptr<folly::IOThreadPoolExecutor> executor,
       shared_ptr<ConnectionParameters> params);
+
+  static shared_ptr<ConnectionParameters> makeConnectionParameters(
+      string id,
+      string hostname,
+      string username,
+      string password,
+      string flavour,
+      int port,
+      chrono::seconds kaTimeout,
+      chrono::seconds cmdTimeout);
+
+ private:
+  shared_ptr<ConnectionParameters> connectionParameters;
+
+  shared_ptr<Cli> createAllUsingFactory(shared_ptr<CliCache> commandCache);
 
   static chrono::seconds loadTimeout(
       const std::map<std::string, std::string>& plaintextCliKv,
