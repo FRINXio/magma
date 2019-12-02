@@ -18,7 +18,7 @@ namespace cli {
 
 using devmand::channels::cli::CliInitializer;
 using devmand::channels::cli::PromptResolver;
-using devmand::channels::cli::sshsession::SshSessionAsync;
+using devmand::channels::cli::sshsession::SessionAsync;
 using folly::SemiFuture;
 using folly::Unit;
 using std::shared_ptr;
@@ -28,7 +28,7 @@ class PromptAwareCli : public Cli {
  private:
   struct PromptAwareParameters {
     string id;
-    shared_ptr<SshSessionAsync> session;
+    shared_ptr<SessionAsync> session;
     shared_ptr<CliFlavour> cliFlavour;
     string prompt;
   };
@@ -37,7 +37,7 @@ class PromptAwareCli : public Cli {
  public:
   PromptAwareCli(
       string id,
-      shared_ptr<SshSessionAsync> session,
+      shared_ptr<SessionAsync> session,
       shared_ptr<CliFlavour> cliFlavour);
 
   ~PromptAwareCli();

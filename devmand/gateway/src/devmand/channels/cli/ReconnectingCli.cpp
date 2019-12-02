@@ -45,7 +45,7 @@ ReconnectingCli::ReconnectingCli(
 }
 
 ReconnectingCli::~ReconnectingCli() {
-  string& id = reconnectParameters->id;
+  string id = reconnectParameters->id;
   MLOG(MDEBUG) << "[" << id << "] "
                << "~RCli started";
   reconnectParameters->shutdown = true;
@@ -153,19 +153,20 @@ SemiFuture<string> ReconnectingCli::executeSomething(
     return innerFunc(cliOrNull)
         .via(reconnectParameters->executor.get())
         .thenValue(
-            [dis = shared_from_this(), loggingPrefix, cmd](
+            [params = reconnectParameters, loggingPrefix, cmd](
                 string result) -> string {
               // TODO: move this to deeper layer
-              MLOG(MDEBUG) << "[" << dis->reconnectParameters->id << "] ("
-                           << cmd.getIdx() << ") " << loggingPrefix
-                           << " succeeded";
+              MLOG(MDEBUG) << "[" << params->id << "] (" << cmd.getIdx() << ") "
+                           << loggingPrefix << " succeeded";
               return result;
             })
         .thenError( // TODO: only reconnect on timeout exception
             folly::tag_t<std::exception>{},
-            [dis = shared_from_this(), loggingPrefix, cmd](
-                std::exception const& e) -> Future<string> {
-              MLOG(MDEBUG) << "[" << dis->reconnectParameters->id << "] ("
+            [dis = shared_from_this(),
+             params = reconnectParameters,
+             loggingPrefix,
+             cmd](std::exception const& e) -> Future<string> {
+              MLOG(MDEBUG) << "[" << params->id << "] ("
                            << cmd.getIdx() << ") " << loggingPrefix
                            << " failed with error : " << e.what();
 

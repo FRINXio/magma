@@ -59,14 +59,14 @@ folly::SemiFuture<std::string> PromptAwareCli::executeRead(
 
 PromptAwareCli::PromptAwareCli(
     string id,
-    shared_ptr<SshSessionAsync> _session,
+    shared_ptr<SessionAsync> _session,
     shared_ptr<CliFlavour> _cliFlavour) {
   promptAwareParameters = shared_ptr<PromptAwareParameters>(
       new PromptAwareParameters{id, _session, _cliFlavour, {}});
 }
 
 PromptAwareCli::~PromptAwareCli() {
-  string& id = promptAwareParameters->id;
+  string id = promptAwareParameters->id;
   while (promptAwareParameters.use_count() > 1) {
     MLOG(MDEBUG) << "[" << id << "] "
                  << "~PromptAwareCli sleeping";

@@ -20,13 +20,13 @@ using devmand::channels::cli::DefaultPromptResolver;
 using devmand::channels::cli::EmptyInitializer;
 using devmand::channels::cli::PromptResolver;
 using devmand::channels::cli::UbiquitiInitializer;
-using devmand::channels::cli::sshsession::SshSessionAsync;
+using devmand::channels::cli::sshsession::SessionAsync;
 using folly::Optional;
 
 static const int DEFAULT_MILLIS = 1000;
 
 SemiFuture<Unit> EmptyInitializer::initialize(
-    shared_ptr<SshSessionAsync> session,
+    shared_ptr<SessionAsync> session,
     string secret) {
   (void)session;
   (void)secret;
@@ -34,7 +34,7 @@ SemiFuture<Unit> EmptyInitializer::initialize(
 }
 
 SemiFuture<Unit> UbiquitiInitializer::initialize(
-    shared_ptr<SshSessionAsync> session,
+    shared_ptr<SessionAsync> session,
     string secret) {
   return session->write("enable\n")
       .thenValue(
@@ -44,7 +44,7 @@ SemiFuture<Unit> UbiquitiInitializer::initialize(
 }
 
 Future<string> DefaultPromptResolver::resolvePrompt(
-    shared_ptr<SshSessionAsync> session,
+    shared_ptr<SessionAsync> session,
     const string& newline) {
   return session
       ->read(DEFAULT_MILLIS) // clear input, converges faster on
@@ -53,7 +53,7 @@ Future<string> DefaultPromptResolver::resolvePrompt(
 }
 
 Future<string> DefaultPromptResolver::resolvePrompt(
-    shared_ptr<SshSessionAsync> session,
+    shared_ptr<SessionAsync> session,
     const string& newline,
     int delayCounter) {
   return resolvePromptAsync(session, newline, delayCounter)
@@ -67,7 +67,7 @@ Future<string> DefaultPromptResolver::resolvePrompt(
 }
 
 Future<Optional<string>> DefaultPromptResolver::resolvePromptAsync(
-    shared_ptr<SshSessionAsync> session,
+    shared_ptr<SessionAsync> session,
     const string& newline,
     int delayCounter) {
   return session->write(newline + newline)

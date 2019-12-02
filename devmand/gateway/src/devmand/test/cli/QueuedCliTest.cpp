@@ -148,6 +148,31 @@ TEST_F(QueuedCliTest, threadSafety) {
   }
 }
 
+TEST_F(QueuedCliTest, cleanDestructOnSuccess) {
+  auto testExec = make_shared<CPUThreadPoolExecutor>(1);
+  auto delegate = getMockCli<EchoCli>(3, testExec);
+  auto testedCli = QueuedCli::make(
+      "testConnection", delegate, make_shared<CPUThreadPoolExecutor>(1));
+
+  vector<SemiFuture<string>> futures;
+  for (int i = 0; i < 10; i++) {
+    futures.emplace_back(
+        testedCli->executeRead(ReadCommand::create("command")).semi());
+  }
+
+  // Destruct cli
+  testedCli.reset();
+
+  // First succeeds, other are canceled
+  ASSERT_EQ(move(futures.at(0)).via(testExec.get()).get(10s), "command");
+  for (uint i = 1; i < 10; i++) {
+    EXPECT_ANY_THROW(move(futures.at(i)).via(testExec.get()).get(10s));
+  }
+
+  MLOG(MDEBUG) << "Waiting for test executor to finish";
+  testExec->join();
+}
+
 } // namespace cli
 } // namespace test
 } // namespace devmand

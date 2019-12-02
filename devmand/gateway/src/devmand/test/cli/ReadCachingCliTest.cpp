@@ -9,7 +9,7 @@
 #include <magma_logging.h>
 
 #include <devmand/cartography/DeviceConfig.h>
-#include <devmand/channels/cli/TimeoutTrackingCli.h>
+#include <devmand/channels/cli/ReadCachingCli.h>
 #include <devmand/test/cli/utils/Log.h>
 #include <devmand/test/cli/utils/MockCli.h>
 #include <devmand/test/cli/utils/Ssh.h>
@@ -25,8 +25,9 @@ namespace cli {
 using namespace devmand::channels::cli;
 using namespace devmand::test::utils::cli;
 using namespace std;
+using namespace folly;
 
-class TimeoutCliTest : public ::testing::Test {
+class ReadCachingCliTest : public ::testing::Test {
  protected:
   shared_ptr<CPUThreadPoolExecutor> testExec;
 
@@ -42,45 +43,20 @@ class TimeoutCliTest : public ::testing::Test {
   }
 };
 
-static const chrono::milliseconds timeout = 1000ms;
-
-static shared_ptr<TimeoutTrackingCli> getCli(shared_ptr<Cli> delegate) {
-  shared_ptr<TimeoutTrackingCli> cli = TimeoutTrackingCli::make(
-      "test",
-      delegate,
-      make_shared<folly::ThreadWheelTimekeeper>(),
-      make_shared<CPUThreadPoolExecutor>(1),
-      timeout);
-  return cli;
+template <typename NESTED>
+static shared_ptr<AsyncCli> getMockCli(
+    uint delay,
+    shared_ptr<CPUThreadPoolExecutor> exec) {
+  vector<unsigned int> durations = {delay};
+  return make_shared<AsyncCli>(make_shared<NESTED>(), exec, durations);
 }
 
-TEST_F(TimeoutCliTest, cleanDestructOnTimeout) {
-  shared_ptr<AsyncCli> delegate = getMockCli<EchoCli>(3, testExec);
-  auto testedCli = getCli(delegate);
-
-  SemiFuture<string> future =
-      testedCli->executeRead(ReadCommand::create("not returning")).semi();
-
-  // Destruct cli
-  testedCli.reset();
-
-  EXPECT_ANY_THROW({ move(future).via(testExec.get()).get(10s); });
+static shared_ptr<ReadCachingCli> getCli(shared_ptr<Cli> delegate) {
+  return make_shared<ReadCachingCli>(
+      "test", delegate, ReadCachingCli::createCache());
 }
 
-TEST_F(TimeoutCliTest, cleanDestructOnError) {
-  shared_ptr<AsyncCli> delegate = getMockCli<ErrCli>(0, testExec);
-  auto testedCli = getCli(delegate);
-
-  SemiFuture<string> future =
-      testedCli->executeRead(ReadCommand::create("not returning")).semi();
-
-  // Destruct cli
-  testedCli.reset();
-
-  EXPECT_ANY_THROW({ move(future).via(testExec.get()).get(10s); });
-}
-
-TEST_F(TimeoutCliTest, cleanDestructOnSuccess) {
+TEST_F(ReadCachingCliTest, cleanDestructOnSuccess) {
   shared_ptr<AsyncCli> delegate = getMockCli<EchoCli>(0, testExec);
   auto testedCli = getCli(delegate);
 
@@ -91,6 +67,19 @@ TEST_F(TimeoutCliTest, cleanDestructOnSuccess) {
   testedCli.reset();
 
   ASSERT_EQ(move(future).via(testExec.get()).get(10s), "returning");
+}
+
+TEST_F(ReadCachingCliTest, cleanDestructOnError) {
+  shared_ptr<AsyncCli> delegate = getMockCli<ErrCli>(0, testExec);
+  auto testedCli = getCli(delegate);
+
+  SemiFuture<string> future =
+      testedCli->executeRead(ReadCommand::create("error")).semi();
+
+  // Destruct cli
+  testedCli.reset();
+
+  EXPECT_ANY_THROW(move(future).via(testExec.get()).get(10s));
 }
 
 } // namespace cli

@@ -75,6 +75,14 @@ class AsyncCli : public Cli {
   bool quit;
 };
 
+template <typename NESTED>
+shared_ptr<AsyncCli> getMockCli(
+    uint delay,
+    shared_ptr<folly::CPUThreadPoolExecutor> exec) {
+  vector<unsigned int> durations = {delay};
+  return make_shared<AsyncCli>(make_shared<NESTED>(), exec, durations);
+}
+
 } // namespace cli
 } // namespace utils
 } // namespace test

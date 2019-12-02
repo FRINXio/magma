@@ -11,7 +11,7 @@
 #include <folly/Optional.h>
 #include <memory>
 
-using devmand::channels::cli::sshsession::SshSessionAsync;
+using devmand::channels::cli::sshsession::SessionAsync;
 using folly::Future;
 using folly::SemiFuture;
 using folly::Unit;
@@ -30,7 +30,7 @@ using std::string;
 class PromptResolver {
  public:
   virtual Future<string> resolvePrompt(
-      shared_ptr<SshSessionAsync> session,
+      shared_ptr<SessionAsync> session,
       const string& newline) = 0;
   virtual ~PromptResolver() = default;
 };
@@ -38,17 +38,17 @@ class PromptResolver {
 class DefaultPromptResolver : public PromptResolver {
  private:
   Future<folly::Optional<string>> resolvePromptAsync(
-      shared_ptr<SshSessionAsync> session,
+      shared_ptr<SessionAsync> session,
       const string& newline,
       int delayCounter);
   Future<string> resolvePrompt(
-      shared_ptr<SshSessionAsync> session,
+      shared_ptr<SessionAsync> session,
       const string& newline,
       int delayCounter);
 
  public:
   Future<string> resolvePrompt(
-      shared_ptr<SshSessionAsync> session,
+      shared_ptr<SessionAsync> session,
       const string& newline);
   void removeEmptyStrings(std::vector<string>& split) const;
 };
@@ -57,14 +57,14 @@ class CliInitializer {
  public:
   virtual ~CliInitializer() = default;
   virtual SemiFuture<Unit> initialize(
-      shared_ptr<SshSessionAsync> session,
+      shared_ptr<SessionAsync> session,
       string secret) = 0;
 };
 
 class EmptyInitializer : public CliInitializer {
  public:
   SemiFuture<Unit> initialize(
-      shared_ptr<SshSessionAsync> session,
+      shared_ptr<SessionAsync> session,
       string secret) override;
   ~EmptyInitializer() override = default;
 };
@@ -72,7 +72,7 @@ class EmptyInitializer : public CliInitializer {
 class UbiquitiInitializer : public CliInitializer {
  public:
   SemiFuture<Unit> initialize(
-      shared_ptr<SshSessionAsync> session,
+      shared_ptr<SessionAsync> session,
       string secret) override;
   ~UbiquitiInitializer() override = default;
 };
