@@ -54,6 +54,7 @@ class PlaintextCliDevice : public Device {
   std::shared_ptr<Channel> channel;
   const ReadCommand stateCommand;
   std::shared_ptr<CliCache> cmdCache;
+  std::shared_ptr<folly::Executor> executor;
 };
 
 } // namespace cli

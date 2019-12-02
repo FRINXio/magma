@@ -21,8 +21,8 @@ using std::shared_ptr;
 using std::string;
 using CliCache = Synchronized<EvictingCacheMap<string, string>>;
 
-Future<string> devmand::channels::cli::ReadCachingCli::executeRead(
-    const ReadCommand cmd) {
+folly::SemiFuture<std::string>
+devmand::channels::cli::ReadCachingCli::executeRead(const ReadCommand cmd) {
   if (!cmd.skipCache()) {
     Optional<string> cachedResult =
         cache->withWLock([cmd, this](auto& cache_) -> Optional<string> {
@@ -36,24 +36,28 @@ Future<string> devmand::channels::cli::ReadCachingCli::executeRead(
         });
 
     if (cachedResult) {
-      return Future<string>(*cachedResult.get_pointer());
+      return folly::SemiFuture<string>(*cachedResult.get_pointer());
     }
   }
 
-  return cli->executeRead(cmd).thenValue([=](string output) {
-    cache->wlock()->insert(cmd.raw(), output);
-    return output;
-  });
+  return cli->executeRead(cmd)
+      .via(executor.get())
+      .thenValue([=](string output) {
+        cache->wlock()->insert(cmd.raw(), output);
+        return output;
+      });
 }
 
 devmand::channels::cli::ReadCachingCli::ReadCachingCli(
     string _id,
     const std::shared_ptr<Cli>& _cli,
-    const shared_ptr<CliCache>& _cache)
-    : id(_id), cli(_cli), cache(_cache) {}
+    const shared_ptr<CliCache>& _cache,
+    const shared_ptr<folly::Executor> _executor)
 
-Future<string> devmand::channels::cli::ReadCachingCli::executeWrite(
-    const WriteCommand cmd) {
+    : id(_id), cli(_cli), cache(_cache), executor(_executor) {}
+
+folly::SemiFuture<std::string>
+devmand::channels::cli::ReadCachingCli::executeWrite(const WriteCommand cmd) {
   return cli->executeWrite(cmd);
 }
 

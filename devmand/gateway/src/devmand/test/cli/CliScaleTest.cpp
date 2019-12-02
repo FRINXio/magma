@@ -130,7 +130,7 @@ TEST_F(CliScaleTest, DISABLED_scale) {
         << chrono::duration_cast<chrono::seconds>(end - begin).count();
     this_thread::sleep_for(chrono::seconds(10));
 
-    vector<Future<string>> requests;
+    vector<SemiFuture<string>> requests;
     for (uint device = 0; device < connects.size(); device++) {
       for (int req = 0; req < REQUESTS; req++) {
         MLOG(MWARNING) << "Invoking device: " << START_PORT + device

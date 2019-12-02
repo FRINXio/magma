@@ -56,7 +56,7 @@ TEST_F(QueuedCliTest, queuedCli) {
   }
 
   // send requests
-  vector<folly::Future<string>> futures;
+  vector<folly::SemiFuture<string>> futures;
   for (const auto& cmd : cmds) {
     MLOG(MDEBUG) << "Executing command '" << cmd;
     futures.push_back(cli->executeRead(ReadCommand::create(cmd)));

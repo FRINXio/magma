@@ -118,7 +118,8 @@ void ReconnectingCli::triggerReconnect(shared_ptr<ReconnectParameters> params) {
   }
 }
 
-Future<string> ReconnectingCli::executeRead(const ReadCommand cmd) {
+folly::SemiFuture<std::string> ReconnectingCli::executeRead(
+    const ReadCommand cmd) {
   // capturing this is ok here - lambda is evaluated synchronously
   return executeSomething(
       "RCli.executeRead",
@@ -126,7 +127,8 @@ Future<string> ReconnectingCli::executeRead(const ReadCommand cmd) {
       cmd);
 }
 
-Future<string> ReconnectingCli::executeWrite(const WriteCommand cmd) {
+folly::SemiFuture<std::string> ReconnectingCli::executeWrite(
+    const WriteCommand cmd) {
   // capturing this is ok here - lambda is evaluated synchronously
   return executeSomething(
       "RCli.executeWrite",
@@ -134,9 +136,9 @@ Future<string> ReconnectingCli::executeWrite(const WriteCommand cmd) {
       cmd);
 }
 
-Future<string> ReconnectingCli::executeSomething(
+SemiFuture<string> ReconnectingCli::executeSomething(
     const string&& loggingPrefix,
-    const function<Future<string>(shared_ptr<Cli>)>& innerFunc,
+    const function<SemiFuture<string>(shared_ptr<Cli>)>& innerFunc,
     const Command cmd) {
   shared_ptr<Cli> cliOrNull = nullptr;
   if (reconnectParameters->isReconnecting) {

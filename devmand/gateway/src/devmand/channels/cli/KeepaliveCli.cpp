@@ -134,11 +134,13 @@ void KeepaliveCli::triggerSendKeepAliveCommand(
           });
 }
 
-Future<string> KeepaliveCli::executeRead(const ReadCommand cmd) {
+folly::SemiFuture<std::string> KeepaliveCli::executeRead(
+    const ReadCommand cmd) {
   return keepaliveParameters->cli->executeRead(cmd);
 }
 
-Future<string> KeepaliveCli::executeWrite(const WriteCommand cmd) {
+folly::SemiFuture<std::string> KeepaliveCli::executeWrite(
+    const WriteCommand cmd) {
   return keepaliveParameters->cli->executeWrite(cmd);
 }
 

@@ -25,7 +25,7 @@ using boost::recursive_mutex;
 class QueuedCli : public Cli {
  private:
   struct QueueEntry {
-    function<Future<string>()> obtainFutureFromCli;
+    function<SemiFuture<string>()> obtainFutureFromCli;
     shared_ptr<Promise<string>> promise;
     Command command = ReadCommand::create("dummy");
     string loggingPrefix;
@@ -60,10 +60,10 @@ class QueuedCli : public Cli {
       shared_ptr<Cli> cli,
       shared_ptr<Executor> parentExecutor);
 
-  Future<string> executeSomething(
+  SemiFuture<string> executeSomething(
       const Command& cmd,
       const string& prefix,
-      function<Future<string>()> innerFunc);
+      function<SemiFuture<string>()> innerFunc);
 
   static void triggerDequeue(shared_ptr<QueuedParameters> queuedParameters);
 
@@ -73,8 +73,8 @@ class QueuedCli : public Cli {
 
   ~QueuedCli() override;
 
-  Future<string> executeRead(const ReadCommand cmd) override;
+  folly::SemiFuture<std::string> executeRead(const ReadCommand cmd) override;
 
-  Future<string> executeWrite(const WriteCommand cmd) override;
+  folly::SemiFuture<std::string> executeWrite(const WriteCommand cmd) override;
 };
 } // namespace devmand::channels::cli

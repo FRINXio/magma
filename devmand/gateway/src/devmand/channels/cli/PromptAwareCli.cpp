@@ -35,7 +35,8 @@ SemiFuture<Unit> PromptAwareCli::initializeCli(const string secret) {
       promptAwareParameters->session, secret);
 }
 
-folly::Future<string> PromptAwareCli::executeRead(const ReadCommand cmd) {
+folly::SemiFuture<std::string> PromptAwareCli::executeRead(
+    const ReadCommand cmd) {
   const string& command = cmd.raw();
 
   return promptAwareParameters->session->write(command)
@@ -76,7 +77,7 @@ PromptAwareCli::~PromptAwareCli() {
                << "~PromptAwareCli done";
 }
 
-folly::Future<std::string> PromptAwareCli::executeWrite(
+folly::SemiFuture<std::string> PromptAwareCli::executeWrite(
     const WriteCommand cmd) {
   const string& command = cmd.raw();
   return promptAwareParameters->session->write(command)

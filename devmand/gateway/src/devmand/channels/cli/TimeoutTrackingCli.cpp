@@ -52,13 +52,19 @@ TimeoutTrackingCli::~TimeoutTrackingCli() {
                << "~TTCli done";
 }
 
-Future<string> TimeoutTrackingCli::executeRead(const ReadCommand cmd) {
-  return executeSomething(cmd, "TTCli.executeRead", [this, cmd]() {
-    return timeoutTrackingParameters->cli->executeRead(cmd);
-  });
+folly::SemiFuture<std::string> TimeoutTrackingCli::executeRead(
+    const ReadCommand cmd) {
+  return executeSomething(
+             cmd,
+             "TTCli.executeRead",
+             [this, cmd]() {
+               return timeoutTrackingParameters->cli->executeRead(cmd);
+             })
+      .semi();
 }
 
-Future<string> TimeoutTrackingCli::executeWrite(const WriteCommand cmd) {
+folly::SemiFuture<std::string> TimeoutTrackingCli::executeWrite(
+    const WriteCommand cmd) {
   return executeSomething(cmd, "TTCli.executeWrite", [this, cmd]() {
     return timeoutTrackingParameters->cli->executeWrite(cmd);
   });
@@ -67,13 +73,13 @@ Future<string> TimeoutTrackingCli::executeWrite(const WriteCommand cmd) {
 Future<string> TimeoutTrackingCli::executeSomething(
     const Command& cmd,
     const string&& loggingPrefix,
-    const function<Future<string>()>& innerFunc) {
+    const function<SemiFuture<string>()>& innerFunc) {
   MLOG(MDEBUG) << "[" << timeoutTrackingParameters->id << "] (" << cmd.getIdx()
                << ") " << loggingPrefix << "('" << cmd << "') called";
   if (timeoutTrackingParameters->shutdown) {
     return Future<string>(runtime_error("TTCli Shutting down"));
   }
-  Future<string> inner =
+  SemiFuture<string> inner =
       innerFunc(); // we expect that this method does not block
   MLOG(MDEBUG) << "[" << timeoutTrackingParameters->id << "] (" << cmd.getIdx()
                << ") "

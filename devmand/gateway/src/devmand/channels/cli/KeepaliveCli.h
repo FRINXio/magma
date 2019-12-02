@@ -35,9 +35,9 @@ class KeepaliveCli : public Cli {
 
   ~KeepaliveCli() override;
 
-  folly::Future<string> executeRead(const ReadCommand cmd) override;
+  folly::SemiFuture<std::string> executeRead(const ReadCommand cmd) override;
 
-  folly::Future<string> executeWrite(const WriteCommand cmd) override;
+  folly::SemiFuture<std::string> executeWrite(const WriteCommand cmd) override;
 
  private:
   struct KeepaliveParameters {

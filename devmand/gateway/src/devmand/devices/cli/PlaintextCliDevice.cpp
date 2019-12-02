@@ -50,7 +50,9 @@ PlaintextCliDevice::PlaintextCliDevice(
     : Device(application, id_, true),
       channel(_channel),
       stateCommand(ReadCommand::create(_stateCommand)),
-      cmdCache(_cmdCache) {}
+      cmdCache(_cmdCache),
+      executor(make_shared<IOThreadPoolExecutor>( // TODO hardcoded executor
+          1)) {}
 
 std::shared_ptr<State> PlaintextCliDevice::getState() {
   MLOG(MINFO) << "[" << id << "] "
@@ -61,6 +63,7 @@ std::shared_ptr<State> PlaintextCliDevice::getState() {
   auto state = State::make(*reinterpret_cast<MetricSink*>(&app), getId());
 
   state->addRequest(channel->executeRead(stateCommand)
+                        .via(executor.get())
                         .thenValue([state, cmd = stateCommand](std::string v) {
                           state->setStatus(true);
                           state->update([&v, &cmd](auto& lockedState) {
@@ -79,6 +82,7 @@ std::shared_ptr<State> PlaintextCliDevice::getState() {
                               }
                               state->addError(e.what());
                             }));
+
   return state;
 }
 

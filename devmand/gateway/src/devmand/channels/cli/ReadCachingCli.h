@@ -25,17 +25,19 @@ class ReadCachingCli : public Cli {
   string id;
   shared_ptr<Cli> cli{};
   shared_ptr<CliCache> cache;
+  shared_ptr<folly::Executor> executor;
 
  public:
   ReadCachingCli(
       string _id,
       const shared_ptr<Cli>& _cli,
-      const shared_ptr<CliCache>& _cache);
+      const shared_ptr<CliCache>& _cache,
+      const shared_ptr<folly::Executor> executor);
 
   ~ReadCachingCli() override;
 
   static shared_ptr<CliCache> createCache();
-  Future<string> executeRead(const ReadCommand cmd) override;
-  Future<string> executeWrite(const WriteCommand cmd) override;
+  folly::SemiFuture<std::string> executeRead(const ReadCommand cmd) override;
+  folly::SemiFuture<std::string> executeWrite(const WriteCommand cmd) override;
 };
 } // namespace devmand::channels::cli

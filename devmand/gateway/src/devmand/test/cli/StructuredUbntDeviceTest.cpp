@@ -38,7 +38,7 @@ class StructuredUbntDeviceTest : public testing::Test {
 
 class UbntFakeCli : public Cli {
  public:
-  folly::Future<string> executeRead(const ReadCommand cmd) override {
+  folly::SemiFuture<std::string> executeRead(const ReadCommand cmd) override {
     (void)cmd;
     if (cmd.raw() == "show interfaces description") {
       return "\n"
@@ -54,8 +54,8 @@ class UbntFakeCli : public Cli {
              "0/8        Enable     Down\n"
              "3/6        Enable     Down\n";
     } else if (cmd.raw().find("show running-config interface ") == 0) {
-      string ifcId = cmd.raw().substr(
-          string("show running-config interface ").size() - 1);
+      string ifcId =
+          cmd.raw().substr(string("show running-config interface ").size() - 1);
 
       return "\n"
              "!Current Configuration:\n"
@@ -129,7 +129,7 @@ class UbntFakeCli : public Cli {
     return "";
   }
 
-  folly::Future<string> executeWrite(const WriteCommand cmd) override {
+  folly::SemiFuture<std::string> executeWrite(const WriteCommand cmd) override {
     (void)cmd;
     return folly::Future<string>("");
   }

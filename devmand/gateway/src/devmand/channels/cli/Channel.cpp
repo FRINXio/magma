@@ -18,7 +18,7 @@ Channel::Channel(
 
 Channel::~Channel() {}
 
-folly::Future<std::string> Channel::executeRead(const ReadCommand cmd) {
+folly::SemiFuture<std::string> Channel::executeRead(const ReadCommand cmd) {
   MLOG(MDEBUG) << "[" << id << "] "
                << "Executing command and reading: "
                << "\"" << cmd << "\"";
@@ -26,7 +26,7 @@ folly::Future<std::string> Channel::executeRead(const ReadCommand cmd) {
   return cli->executeRead(cmd);
 }
 
-folly::Future<std::string> Channel::executeWrite(const WriteCommand cmd) {
+folly::SemiFuture<std::string> Channel::executeWrite(const WriteCommand cmd) {
   MLOG(MDEBUG) << "[" << id << "]"
                << "Executing command"
                << "\"" << cmd << "\"";

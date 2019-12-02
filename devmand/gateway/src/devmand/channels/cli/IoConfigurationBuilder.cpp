@@ -86,12 +86,20 @@ shared_ptr<Cli> IoConfigurationBuilder::createAllUsingFactory(
   shared_ptr<IOThreadPoolExecutor> executor = make_shared<IOThreadPoolExecutor>(
       10, std::make_shared<NamedThreadFactory>("persession"));
 
+  shared_ptr<IOThreadPoolExecutor> rccliExecutor =
+      make_shared<IOThreadPoolExecutor>(
+          1, std::make_shared<NamedThreadFactory>("rccli"));
+
   function<SemiFuture<shared_ptr<Cli>>()> cliFactory =
-      [executor, params = connectionParameters, timekeeper, commandCache]() {
+      [executor,
+       params = connectionParameters,
+       timekeeper,
+       commandCache,
+       rccliExecutor]() {
         return createPromptAwareCli(executor, params)
             .via(executor.get())
             .thenValue(
-                [executor, params, commandCache, timekeeper](
+                [executor, params, commandCache, timekeeper, rccliExecutor](
                     shared_ptr<Cli> sshCli) -> shared_ptr<Cli> {
                   MLOG(MDEBUG) << "[" << params->id
                                << "] "
@@ -99,7 +107,7 @@ shared_ptr<Cli> IoConfigurationBuilder::createAllUsingFactory(
                   // create caching cli
                   const shared_ptr<ReadCachingCli>& rccli =
                       std::make_shared<ReadCachingCli>(
-                          params->id, sshCli, commandCache);
+                          params->id, sshCli, commandCache, rccliExecutor);
                   // create timeout tracker
                   shared_ptr<TimeoutTrackingCli> ttcli =
                       TimeoutTrackingCli::make(

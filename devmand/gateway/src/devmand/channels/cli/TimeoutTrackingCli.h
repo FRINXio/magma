@@ -37,9 +37,9 @@ class TimeoutTrackingCli : public Cli {
 
   ~TimeoutTrackingCli() override;
 
-  folly::Future<std::string> executeRead(const ReadCommand cmd) override;
+  folly::SemiFuture<std::string> executeRead(const ReadCommand cmd) override;
 
-  folly::Future<std::string> executeWrite(const WriteCommand cmd) override;
+  folly::SemiFuture<std::string> executeWrite(const WriteCommand cmd) override;
 
  private:
   struct TimeoutTrackingParameters {
@@ -62,6 +62,6 @@ class TimeoutTrackingCli : public Cli {
   Future<string> executeSomething(
       const Command& cmd,
       const string&& loggingPrefix,
-      const function<Future<string>()>& innerFunc);
+      const function<SemiFuture<string>()>& innerFunc);
 };
 } // namespace devmand::channels::cli

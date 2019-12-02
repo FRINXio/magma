@@ -37,9 +37,9 @@ class ReconnectingCli : public Cli,
 
   ~ReconnectingCli() override;
 
-  folly::Future<std::string> executeRead(const ReadCommand cmd) override;
+  folly::SemiFuture<std::string> executeRead(const ReadCommand cmd) override;
 
-  folly::Future<std::string> executeWrite(const WriteCommand cmd) override;
+  folly::SemiFuture<std::string> executeWrite(const WriteCommand cmd) override;
 
  private:
   struct ReconnectParameters {
@@ -72,9 +72,9 @@ class ReconnectingCli : public Cli,
       shared_ptr<Timekeeper> timekeeper,
       chrono::milliseconds quietPeriod);
 
-  Future<string> executeSomething(
+  SemiFuture<string> executeSomething(
       const string&& loggingPrefix,
-      const function<Future<string>(shared_ptr<Cli>)>& innerFunc,
+      const function<SemiFuture<string>(shared_ptr<Cli>)>& innerFunc,
       const Command cmd);
 
   static void triggerReconnect(shared_ptr<ReconnectParameters> params);

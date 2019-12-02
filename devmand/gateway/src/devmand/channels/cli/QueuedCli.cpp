@@ -62,7 +62,7 @@ QueuedCli::~QueuedCli() {
                << "~QCli done";
 }
 
-Future<string> QueuedCli::executeRead(const ReadCommand cmd) {
+folly::SemiFuture<std::string> QueuedCli::executeRead(const ReadCommand cmd) {
   boost::recursive_mutex::scoped_lock scoped_lock(queuedParameters->mutex);
   return executeSomething(
       cmd, "QCli.executeRead", [params = queuedParameters, cmd]() {
@@ -70,7 +70,7 @@ Future<string> QueuedCli::executeRead(const ReadCommand cmd) {
       });
 }
 
-Future<string> QueuedCli::executeWrite(const WriteCommand cmd) {
+folly::SemiFuture<std::string> QueuedCli::executeWrite(const WriteCommand cmd) {
   boost::recursive_mutex::scoped_lock scoped_lock(queuedParameters->mutex);
   Command command = cmd;
   if (!command.isMultiCommand()) {
@@ -85,27 +85,32 @@ Future<string> QueuedCli::executeWrite(const WriteCommand cmd) {
 
   for (unsigned long i = 0; i < (commands.size() - 1); i++) {
     commmandsFutures.emplace_back(
-        executeSomething(commands.at(i), "QCli.executeWrite", [=]() {
-          return queuedParameters->cli->executeWrite(
-              WriteCommand::create(commands.at(i)));
-        }));
+        executeSomething(
+            commands.at(i),
+            "QCli.executeWrite",
+            [=]() {
+              return queuedParameters->cli->executeWrite(
+                  WriteCommand::create(commands.at(i)));
+            })
+            .via(queuedParameters->serialExecutorKeepAlive));
   }
 
   commmandsFutures.emplace_back(
-      executeRead(ReadCommand::create(commands.back())));
-  Future<string> future = reduce(
-      commmandsFutures.begin(),
-      commmandsFutures.end(),
-      string(""),
-      [](string s1, string s2) { return s1 + s2; });
+      executeRead(ReadCommand::create(commands.back()))
+          .via(queuedParameters->serialExecutorKeepAlive));
 
-  return future;
+  return reduce(
+             commmandsFutures.begin(),
+             commmandsFutures.end(),
+             string(""),
+             [](string s1, string s2) { return s1 + s2; })
+      .semi();
 }
 
-Future<string> QueuedCli::executeSomething(
+SemiFuture<string> QueuedCli::executeSomething(
     const Command& cmd,
     const string& prefix,
-    function<Future<string>()> innerFunc) {
+    function<SemiFuture<string>()> innerFunc) {
   shared_ptr<Promise<string>> promise = std::make_shared<Promise<string>>();
   QueueEntry queueEntry = QueueEntry{move(innerFunc), promise, cmd, prefix};
   MLOG(MDEBUG) << "[" << queuedParameters->id << "] ("
@@ -116,7 +121,7 @@ Future<string> QueuedCli::executeSomething(
   if (!queuedParameters->isProcessing) {
     triggerDequeue(queuedParameters);
   }
-  return promise->getFuture();
+  return promise->getFuture().semi();
 }
 
 /*
@@ -145,7 +150,7 @@ void QueuedCli::triggerDequeue(shared_ptr<QueuedParameters> queuedParameters) {
           return;
         }
         params->isProcessing = true;
-        Future<string> cliFuture = queueEntry.obtainFutureFromCli();
+        SemiFuture<string> cliFuture = queueEntry.obtainFutureFromCli();
         MLOG(MDEBUG) << "[" << params->id << "] ("
                      << queueEntry.command.getIdx() << ") "
                      << queueEntry.loggingPrefix
