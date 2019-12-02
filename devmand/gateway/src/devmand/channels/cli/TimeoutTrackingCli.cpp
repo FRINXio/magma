@@ -86,12 +86,6 @@ Future<string> TimeoutTrackingCli::executeSomething(
                << "Obtained future from underlying cli";
   return move(inner)
       .via(timeoutTrackingParameters->executor.get())
-      .thenValue(
-          [params = timeoutTrackingParameters, cmd](string result) -> string {
-            MLOG(MDEBUG) << "[" << params->id << "] (" << cmd.getIdx() << ") "
-                         << "succeeded";
-            return result;
-          })
       .onTimeout(
           timeoutTrackingParameters->timeoutInterval,
           [params = timeoutTrackingParameters, cmd](...) -> Future<string> {
@@ -101,7 +95,13 @@ Future<string> TimeoutTrackingCli::executeSomething(
                          << "timing out";
             throw FutureTimeout();
           },
-          timeoutTrackingParameters->timekeeper.get());
+          timeoutTrackingParameters->timekeeper.get())
+      .thenValue(
+          [params = timeoutTrackingParameters, cmd](string result) -> string {
+            MLOG(MDEBUG) << "[" << params->id << "] (" << cmd.getIdx() << ") "
+                         << "succeeded";
+            return result;
+          });
 }
 
 } // namespace devmand::channels::cli

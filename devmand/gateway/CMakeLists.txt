@@ -187,6 +187,7 @@ add_executable(devmantest
   ${PROJECT_SOURCE_DIR}/src/devmand/test/cli/CliScaleTest.cpp
   ${PROJECT_SOURCE_DIR}/src/devmand/test/cli/SshSessionTest.cpp
   ${PROJECT_SOURCE_DIR}/src/devmand/test/cli/QueuedCliTest.cpp
+  ${PROJECT_SOURCE_DIR}/src/devmand/test/cli/TimeoutTrackingCliTest.cpp
   ${PROJECT_SOURCE_DIR}/src/devmand/test/cli/utils/Json.cpp
   ${PROJECT_SOURCE_DIR}/src/devmand/test/cli/utils/Ssh.cpp
   ${PROJECT_SOURCE_DIR}/src/devmand/test/cli/utils/Log.cpp
