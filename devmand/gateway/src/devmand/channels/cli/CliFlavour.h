@@ -63,17 +63,15 @@ class CliInitializer {
 
 class EmptyInitializer : public CliInitializer {
  public:
-  SemiFuture<Unit> initialize(
-      shared_ptr<SessionAsync> session,
-      string secret) override;
+  SemiFuture<Unit> initialize(shared_ptr<SessionAsync> session, string secret)
+      override;
   ~EmptyInitializer() override = default;
 };
 
 class UbiquitiInitializer : public CliInitializer {
  public:
-  SemiFuture<Unit> initialize(
-      shared_ptr<SessionAsync> session,
-      string secret) override;
+  SemiFuture<Unit> initialize(shared_ptr<SessionAsync> session, string secret)
+      override;
   ~UbiquitiInitializer() override = default;
 };
 

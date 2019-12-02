@@ -40,12 +40,16 @@ folly::SemiFuture<std::string> PromptAwareCli::executeRead(
   const string& command = cmd.raw();
 
   return promptAwareParameters->session->write(command)
+      .semi()
+      .via(promptAwareParameters->executor.get())
       .thenValue([params = promptAwareParameters, command](...) {
         return params->session->readUntilOutput(command);
       })
       .thenValue([params = promptAwareParameters](const string& output) {
         auto returnOutputParameter = [output](...) { return output; };
         return params->session->write(params->cliFlavour->newline)
+            .semi()
+            .via(params->executor.get())
             .thenValue(returnOutputParameter);
       })
       .thenValue([params = promptAwareParameters](const string& output) {
@@ -53,6 +57,8 @@ folly::SemiFuture<std::string> PromptAwareCli::executeRead(
           return output + readUntilOutput;
         };
         return params->session->readUntilOutput(params->prompt)
+            .semi()
+            .via(params->executor.get())
             .thenValue(concatOutputParameter);
       });
 }
@@ -60,9 +66,10 @@ folly::SemiFuture<std::string> PromptAwareCli::executeRead(
 PromptAwareCli::PromptAwareCli(
     string id,
     shared_ptr<SessionAsync> _session,
-    shared_ptr<CliFlavour> _cliFlavour) {
+    shared_ptr<CliFlavour> _cliFlavour,
+    shared_ptr<Executor> _executor) {
   promptAwareParameters = shared_ptr<PromptAwareParameters>(
-      new PromptAwareParameters{id, _session, _cliFlavour, {}});
+      new PromptAwareParameters{id, _session, _cliFlavour, _executor, {}});
 }
 
 PromptAwareCli::~PromptAwareCli() {
@@ -81,15 +88,29 @@ folly::SemiFuture<std::string> PromptAwareCli::executeWrite(
     const WriteCommand cmd) {
   const string& command = cmd.raw();
   return promptAwareParameters->session->write(command)
+      .semi()
+      .via(promptAwareParameters->executor.get())
       .thenValue([params = promptAwareParameters, command](...) {
-        return params->session->readUntilOutput(command);
+        return params->session->readUntilOutput(command).semi();
       })
       .thenValue(
           [params = promptAwareParameters, command](const string& output) {
             return params->session->write(params->cliFlavour->newline)
+                .semi()
+                .via(params->executor.get())
                 .thenValue([output, command](...) { return output + command; });
           });
 }
+
+shared_ptr<PromptAwareCli> PromptAwareCli::make(
+    string id,
+    shared_ptr<SessionAsync> session,
+    shared_ptr<CliFlavour> cliFlavour,
+    shared_ptr<Executor> executor) {
+  return shared_ptr<PromptAwareCli>(
+      new PromptAwareCli(id, session, cliFlavour, executor));
+}
+
 } // namespace cli
 } // namespace channels
 } // namespace devmand

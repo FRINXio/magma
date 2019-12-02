@@ -69,7 +69,7 @@ TEST_F(ReconnectingCliTest, cleanDestructNotConnected) {
   auto testedCli = getCli(factory);
 
   SemiFuture<string> future =
-      testedCli->executeRead(ReadCommand::create("not returning")).semi();
+      testedCli->executeRead(ReadCommand::create("not returning"));
 
   // Destruct cli
   testedCli.reset();
@@ -85,7 +85,7 @@ TEST_F(ReconnectingCliTest, cleanDestructConnected) {
   waitTillCliRecreated();
 
   SemiFuture<string> future =
-      testedCli->executeRead(ReadCommand::create("returning")).semi();
+      testedCli->executeRead(ReadCommand::create("returning"));
 
   // Destruct cli
   testedCli.reset();
@@ -101,7 +101,7 @@ TEST_F(ReconnectingCliTest, cleanDestructConnectedWithDelay) {
   waitTillCliRecreated();
 
   SemiFuture<string> future =
-      testedCli->executeRead(ReadCommand::create("returning")).semi();
+      testedCli->executeRead(ReadCommand::create("returning"));
 
   // Destruct cli
   testedCli.reset();
@@ -117,7 +117,7 @@ TEST_F(ReconnectingCliTest, cleanDestructOnError) {
   waitTillCliRecreated();
 
   SemiFuture<string> future =
-      testedCli->executeRead(ReadCommand::create("not returning")).semi();
+      testedCli->executeRead(ReadCommand::create("not returning"));
 
   // Destruct cli
   testedCli.reset();
@@ -133,7 +133,7 @@ TEST_F(ReconnectingCliTest, cleanDestructOnErrorWithDelay) {
   waitTillCliRecreated();
 
   SemiFuture<string> future =
-      testedCli->executeRead(ReadCommand::create("not returning")).semi();
+      testedCli->executeRead(ReadCommand::create("not returning"));
 
   // Destruct cli
   testedCli.reset();

@@ -60,7 +60,7 @@ TEST_F(KeepaliveCliTest, cleanDestructOnSuccess) {
   auto testedCli = getCli(delegate);
 
   SemiFuture<string> future =
-      testedCli->executeRead(ReadCommand::create("returning")).semi();
+      testedCli->executeRead(ReadCommand::create("returning"));
 
   // Destruct cli
   testedCli.reset();
@@ -73,7 +73,7 @@ TEST_F(KeepaliveCliTest, cleanDestructOnSuccessWithDelay) {
   auto testedCli = getCli(delegate);
 
   SemiFuture<string> future =
-      testedCli->executeRead(ReadCommand::create("returning")).semi();
+      testedCli->executeRead(ReadCommand::create("returning"));
 
   // Destruct cli
   testedCli.reset();
@@ -86,7 +86,7 @@ TEST_F(KeepaliveCliTest, cleanDestructOnError) {
   auto testedCli = getCli(delegate);
 
   SemiFuture<string> future =
-      testedCli->executeRead(ReadCommand::create("returning")).semi();
+      testedCli->executeRead(ReadCommand::create("returning"));
 
   // Destruct cli
   testedCli.reset();
@@ -99,7 +99,7 @@ TEST_F(KeepaliveCliTest, cleanDestructOnErrorWithDelay) {
   auto testedCli = getCli(delegate);
 
   SemiFuture<string> future =
-      testedCli->executeRead(ReadCommand::create("returning")).semi();
+      testedCli->executeRead(ReadCommand::create("returning"));
 
   // Destruct cli
   testedCli.reset();

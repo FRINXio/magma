@@ -170,9 +170,12 @@ Future<shared_ptr<Cli>> IoConfigurationBuilder::createPromptAwareCli(
                << "] "
                   "Setting flavour";
   shared_ptr<CliFlavour> cl = params->flavour;
+  const shared_ptr<IOThreadPoolExecutor>& pacli =
+      std::make_shared<IOThreadPoolExecutor>(
+          1, std::make_shared<NamedThreadFactory>("pacli"));
   // create CLI
   shared_ptr<PromptAwareCli> cli =
-      std::make_shared<PromptAwareCli>(params->id, session, cl);
+      PromptAwareCli::make(params->id, session, cl, pacli);
   MLOG(MDEBUG) << "[" << params->id
                << "] "
                   "Initializing cli";

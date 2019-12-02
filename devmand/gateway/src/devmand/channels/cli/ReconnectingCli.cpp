@@ -166,8 +166,8 @@ SemiFuture<string> ReconnectingCli::executeSomething(
              params = reconnectParameters,
              loggingPrefix,
              cmd](std::exception const& e) -> Future<string> {
-              MLOG(MDEBUG) << "[" << params->id << "] ("
-                           << cmd.getIdx() << ") " << loggingPrefix
+              MLOG(MDEBUG) << "[" << params->id << "] (" << cmd.getIdx() << ") "
+                           << loggingPrefix
                            << " failed with error : " << e.what();
 
               dis->triggerReconnect(dis->reconnectParameters);

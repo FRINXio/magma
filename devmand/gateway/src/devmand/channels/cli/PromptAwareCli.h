@@ -19,6 +19,7 @@ namespace cli {
 using devmand::channels::cli::CliInitializer;
 using devmand::channels::cli::PromptResolver;
 using devmand::channels::cli::sshsession::SessionAsync;
+using folly::Executor;
 using folly::SemiFuture;
 using folly::Unit;
 using std::shared_ptr;
@@ -30,15 +31,22 @@ class PromptAwareCli : public Cli {
     string id;
     shared_ptr<SessionAsync> session;
     shared_ptr<CliFlavour> cliFlavour;
+    shared_ptr<Executor> executor;
     string prompt;
   };
   shared_ptr<PromptAwareParameters> promptAwareParameters;
-
- public:
   PromptAwareCli(
       string id,
       shared_ptr<SessionAsync> session,
-      shared_ptr<CliFlavour> cliFlavour);
+      shared_ptr<CliFlavour> cliFlavour,
+      shared_ptr<Executor> executor);
+
+ public:
+  static shared_ptr<PromptAwareCli> make(
+      string id,
+      shared_ptr<SessionAsync> session,
+      shared_ptr<CliFlavour> cliFlavour,
+      shared_ptr<Executor> executor);
 
   ~PromptAwareCli();
 

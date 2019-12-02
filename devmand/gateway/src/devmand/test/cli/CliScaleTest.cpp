@@ -90,8 +90,12 @@ TEST_F(CliScaleTest, DISABLED_scale) {
 
     shared_ptr<CliFlavour> cl = CliFlavour::create("ubiquiti");
 
-    const shared_ptr<PromptAwareCli>& cli =
-        std::make_shared<PromptAwareCli>("test", session, cl);
+    const shared_ptr<PromptAwareCli>& cli = PromptAwareCli::make(
+        "test",
+        session,
+        cl,
+        std::make_shared<folly::IOThreadPoolExecutor>(
+            1, std::make_shared<folly::NamedThreadFactory>("rccli")));
 
     cli->initializeCli("cisco");
     cli->resolvePrompt();

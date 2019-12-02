@@ -15,6 +15,7 @@
 #include <devmand/test/cli/utils/Ssh.h>
 #include <folly/Executor.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
+#include <folly/executors/IOThreadPoolExecutor.h>
 #include <gtest/gtest.h>
 #include <chrono>
 
@@ -82,15 +83,19 @@ class MockSession : public SessionAsync {
 static shared_ptr<PromptAwareCli> getCli(
     shared_ptr<CPUThreadPoolExecutor> testExec) {
   shared_ptr<MockSession> ptr = make_shared<MockSession>(testExec);
-  return make_shared<PromptAwareCli>("test", ptr, CliFlavour::create(""));
+  return PromptAwareCli::make(
+      "test",
+      ptr,
+      CliFlavour::create(""),
+      std::make_shared<folly::IOThreadPoolExecutor>(
+          1, std::make_shared<folly::NamedThreadFactory>("rccli")));
 }
 
 TEST_F(PromptAwareCliTest, cleanDestructOnSuccess) {
-
   auto testedCli = getCli(testExec);
 
   SemiFuture<string> future =
-      testedCli->executeRead(ReadCommand::create("returning")).semi();
+      testedCli->executeRead(ReadCommand::create("returning"));
 
   // Destruct cli
   testedCli.reset();
@@ -102,7 +107,7 @@ TEST_F(PromptAwareCliTest, cleanDestructOnWriteSuccess) {
   auto testedCli = getCli(testExec);
 
   SemiFuture<string> future =
-      testedCli->executeWrite(WriteCommand::create("returning")).semi();
+      testedCli->executeWrite(WriteCommand::create("returning"));
 
   // Destruct cli
   testedCli.reset();
@@ -114,7 +119,7 @@ TEST_F(PromptAwareCliTest, cleanDestructOnError) {
   auto testedCli = getCli(testExec);
 
   SemiFuture<string> future =
-      testedCli->executeRead(ReadCommand::create("error")).semi();
+      testedCli->executeRead(ReadCommand::create("error"));
 
   // Destruct cli
   testedCli.reset();

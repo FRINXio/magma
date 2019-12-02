@@ -59,7 +59,7 @@ TEST_F(TimeoutCliTest, cleanDestructOnTimeout) {
   auto testedCli = getCli(delegate);
 
   SemiFuture<string> future =
-      testedCli->executeRead(ReadCommand::create("not returning")).semi();
+      testedCli->executeRead(ReadCommand::create("not returning"));
 
   // Destruct cli
   testedCli.reset();
@@ -72,7 +72,7 @@ TEST_F(TimeoutCliTest, cleanDestructOnError) {
   auto testedCli = getCli(delegate);
 
   SemiFuture<string> future =
-      testedCli->executeRead(ReadCommand::create("not returning")).semi();
+      testedCli->executeRead(ReadCommand::create("not returning"));
 
   // Destruct cli
   testedCli.reset();
@@ -85,7 +85,7 @@ TEST_F(TimeoutCliTest, cleanDestructOnSuccess) {
   auto testedCli = getCli(delegate);
 
   SemiFuture<string> future =
-      testedCli->executeRead(ReadCommand::create("returning")).semi();
+      testedCli->executeRead(ReadCommand::create("returning"));
 
   // Destruct cli
   testedCli.reset();

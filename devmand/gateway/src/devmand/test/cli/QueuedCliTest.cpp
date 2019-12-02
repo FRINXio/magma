@@ -157,7 +157,7 @@ TEST_F(QueuedCliTest, cleanDestructOnSuccess) {
   vector<SemiFuture<string>> futures;
   for (int i = 0; i < 10; i++) {
     futures.emplace_back(
-        testedCli->executeRead(ReadCommand::create("command")).semi());
+        testedCli->executeRead(ReadCommand::create("command")));
   }
 
   // Destruct cli

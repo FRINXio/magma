@@ -15,6 +15,7 @@
 #include <devmand/test/cli/utils/Ssh.h>
 #include <folly/Executor.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
+#include <folly/executors/IOThreadPoolExecutor.h>
 #include <gtest/gtest.h>
 #include <chrono>
 
@@ -53,7 +54,11 @@ static shared_ptr<AsyncCli> getMockCli(
 
 static shared_ptr<ReadCachingCli> getCli(shared_ptr<Cli> delegate) {
   return make_shared<ReadCachingCli>(
-      "test", delegate, ReadCachingCli::createCache());
+      "test",
+      delegate,
+      ReadCachingCli::createCache(),
+      std::make_shared<folly::IOThreadPoolExecutor>(
+          1, std::make_shared<folly::NamedThreadFactory>("rccli")));
 }
 
 TEST_F(ReadCachingCliTest, cleanDestructOnSuccess) {
@@ -61,7 +66,7 @@ TEST_F(ReadCachingCliTest, cleanDestructOnSuccess) {
   auto testedCli = getCli(delegate);
 
   SemiFuture<string> future =
-      testedCli->executeRead(ReadCommand::create("returning")).semi();
+      testedCli->executeRead(ReadCommand::create("returning"));
 
   // Destruct cli
   testedCli.reset();
@@ -74,7 +79,7 @@ TEST_F(ReadCachingCliTest, cleanDestructOnError) {
   auto testedCli = getCli(delegate);
 
   SemiFuture<string> future =
-      testedCli->executeRead(ReadCommand::create("error")).semi();
+      testedCli->executeRead(ReadCommand::create("error"));
 
   // Destruct cli
   testedCli.reset();
