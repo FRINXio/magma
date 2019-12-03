@@ -177,7 +177,8 @@ SemiFuture<string> ReconnectingCli::executeSomething(
               // TODO: exception type is not preserved,
               // queueEntry.promise->setException(e) results in std::exception
               throw cpException;
-            });
+            })
+        .semi();
   } else {
     return makeFuture<string>(runtime_error("Not connected"));
   }

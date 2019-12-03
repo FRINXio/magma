@@ -50,7 +50,7 @@ class IoConfigurationBuilder {
   shared_ptr<Cli> createAll(shared_ptr<CliCache> commandCache);
 
   static Future<shared_ptr<Cli>> createPromptAwareCli(
-      shared_ptr<folly::IOThreadPoolExecutor> executor,
+      shared_ptr<folly::Executor> executor,
       shared_ptr<ConnectionParameters> params);
 
   static shared_ptr<ConnectionParameters> makeConnectionParameters(

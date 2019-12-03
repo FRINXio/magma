@@ -32,13 +32,21 @@ extern void initSsh();
 extern shared_ptr<CPUThreadPoolExecutor> testExecutor;
 
 struct server {
+ public:
   string id;
   ssh_bind sshbind = nullptr;
   ssh_session session = nullptr;
   Future<Unit> serverFuture;
+  mutex received_guard;
+  string received = "";
 
   bool isConnected() {
     return session != nullptr and ssh_is_connected(session);
+  }
+
+  string getReceived() {
+    lock_guard<std::mutex> lg(received_guard);
+    return received;
   }
 
   void close() {

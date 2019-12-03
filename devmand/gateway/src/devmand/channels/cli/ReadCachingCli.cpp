@@ -45,7 +45,8 @@ devmand::channels::cli::ReadCachingCli::executeRead(const ReadCommand cmd) {
       .thenValue([=](string output) {
         cache->wlock()->insert(cmd.raw(), output);
         return output;
-      });
+      })
+      .semi();
 }
 
 devmand::channels::cli::ReadCachingCli::ReadCachingCli(

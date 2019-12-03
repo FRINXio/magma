@@ -35,7 +35,7 @@ shared_ptr<CPUThreadPoolExecutor> executor =
 class QueuedCliTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    devmand::test::utils::log::initLog();
+    devmand::test::utils::log::initLog(MWARNING);
     devmand::test::utils::ssh::initSsh();
   }
 };
@@ -163,8 +163,14 @@ TEST_F(QueuedCliTest, cleanDestructOnSuccess) {
   // Destruct cli
   testedCli.reset();
 
-  // First succeeds, other are canceled
-  ASSERT_EQ(move(futures.at(0)).via(testExec.get()).get(10s), "command");
+  // First request can succeed, other are canceled
+  try {
+    ASSERT_EQ(move(futures.at(0)).via(testExec.get()).get(10s), "command");
+  } catch (const runtime_error& e) {
+    // The first one can succeed or be canceled, depends on timing
+    // But since we are only testing clean destruct, we don't care
+  }
+
   for (uint i = 1; i < 10; i++) {
     EXPECT_THROW(move(futures.at(i)).via(testExec.get()).get(10s), runtime_error);
   }

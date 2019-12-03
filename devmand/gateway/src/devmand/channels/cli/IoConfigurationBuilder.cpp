@@ -152,7 +152,7 @@ shared_ptr<Cli> IoConfigurationBuilder::createAllUsingFactory(
 }
 
 Future<shared_ptr<Cli>> IoConfigurationBuilder::createPromptAwareCli(
-    shared_ptr<IOThreadPoolExecutor> executor,
+    shared_ptr<folly::Executor> executor,
     shared_ptr<ConnectionParameters> params) {
   MLOG(MDEBUG) << "Creating CLI ssh device for " << params->id << " ("
                << params->ip << ":" << params->port << ")";

@@ -45,11 +45,14 @@ folly::SemiFuture<std::string> PromptAwareCli::executeRead(
       .thenValue([params = promptAwareParameters, command, cmd](...) {
         MLOG(MDEBUG) << "[" << params->id << "] (" << cmd.getIdx()
                      << ") written command";
-        Future<string> result = params->session->readUntilOutput(command);
+        SemiFuture<string> result =
+            params->session->readUntilOutput(command).semi();
         MLOG(MDEBUG) << "[" << params->id << "] (" << cmd.getIdx()
                      << ") obtained future readUntilOutput";
         return move(result);
       })
+      .semi()
+      .via(promptAwareParameters->executor.get())
       .thenValue([params = promptAwareParameters, cmd](const string& output) {
         return params->session->write(params->cliFlavour->newline)
             .semi()
@@ -58,8 +61,11 @@ folly::SemiFuture<std::string> PromptAwareCli::executeRead(
               MLOG(MDEBUG) << "[" << params->id << "] (" << cmd.getIdx()
                            << ") written newline";
               return output;
-            });
+            })
+            .semi();
       })
+      .semi()
+      .via(promptAwareParameters->executor.get())
       .thenValue([params = promptAwareParameters, cmd](const string& output) {
         return params->session->readUntilOutput(params->prompt)
             .semi()
@@ -70,8 +76,10 @@ folly::SemiFuture<std::string> PromptAwareCli::executeRead(
                   MLOG(MDEBUG) << "[" << id << "] (" << cmd.getIdx()
                                << ") readUntilOutput - read result";
                   return output + readUntilOutput;
-                });
-      });
+                })
+            .semi();
+      })
+      .semi();
 }
 
 PromptAwareCli::PromptAwareCli(
@@ -92,6 +100,10 @@ PromptAwareCli::~PromptAwareCli() {
                  << "~PromptAwareCli sleeping";
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }
+
+  // Closing session explicitly to finish executing future and disconnect before
+  // releasing the rest of state
+  promptAwareParameters->session = nullptr;
   promptAwareParameters = nullptr;
   MLOG(MDEBUG) << "[" << id << "] "
                << "~PromptAwareCli done";
@@ -121,8 +133,10 @@ folly::SemiFuture<std::string> PromptAwareCli::executeWrite(
                   MLOG(MDEBUG) << "[" << id << "] (" << cmd.getIdx()
                                << ") written newline";
                   return output + command;
-                });
-          });
+                })
+                .semi();
+          })
+      .semi();
 }
 
 shared_ptr<PromptAwareCli> PromptAwareCli::make(

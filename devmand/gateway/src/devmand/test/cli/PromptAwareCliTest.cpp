@@ -10,20 +10,13 @@
 
 #include <devmand/cartography/DeviceConfig.h>
 #include <devmand/channels/cli/Cli.h>
-#include <devmand/channels/cli/IoConfigurationBuilder.h>
 #include <devmand/channels/cli/PromptAwareCli.h>
-#include <devmand/channels/cli/TimeoutTrackingCli.h>
-#include <devmand/devices/Device.h>
 #include <devmand/test/cli/utils/Log.h>
-#include <devmand/test/cli/utils/MockCli.h>
 #include <devmand/test/cli/utils/Ssh.h>
 #include <folly/Executor.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
-#include <folly/executors/IOThreadPoolExecutor.h>
-#include <folly/executors/ThreadedExecutor.h>
 #include <folly/futures/ThreadWheelTimekeeper.h>
 #include <gtest/gtest.h>
-#include <atomic>
 #include <chrono>
 
 namespace devmand {
@@ -31,21 +24,9 @@ namespace test {
 namespace cli {
 
 using namespace devmand::channels::cli;
-using namespace devmand::test::utils::cli;
 using namespace std;
 using namespace folly;
 using namespace std::chrono_literals;
-using devmand::Application;
-using devmand::cartography::ChannelConfig;
-using devmand::cartography::DeviceConfig;
-using devmand::devices::Device;
-using devmand::devices::State;
-using devmand::test::utils::cli::AsyncCli;
-using devmand::test::utils::cli::EchoCli;
-using folly::CPUThreadPoolExecutor;
-using std::atomic_bool;
-using std::make_shared;
-using namespace devmand::test::utils::ssh;
 
 class PromptAwareCliTest : public ::testing::Test {
  protected:
@@ -101,13 +82,11 @@ class MockSession : public SessionAsync {
 
 static shared_ptr<PromptAwareCli> getCli(
     shared_ptr<CPUThreadPoolExecutor> testExec) {
-  shared_ptr<MockSession> ptr = make_shared<MockSession>(testExec);
   return PromptAwareCli::make(
       "test",
-      ptr,
+      make_shared<MockSession>(testExec),
       CliFlavour::create(""),
-      std::make_shared<folly::IOThreadPoolExecutor>(
-          1, std::make_shared<folly::NamedThreadFactory>("rccli")));
+      std::make_shared<folly::CPUThreadPoolExecutor>(1));
 }
 
 TEST_F(PromptAwareCliTest, cleanDestructOnSuccess) {
@@ -144,48 +123,6 @@ TEST_F(PromptAwareCliTest, cleanDestructOnError) {
   testedCli.reset();
 
   EXPECT_THROW(move(future).via(testExec.get()).get(10s), runtime_error);
-}
-
-TEST_F(PromptAwareCliTest, promptAwareCli) {
-  atomic_bool exceptionCaught(false);
-  shared_ptr<IOThreadPoolExecutor> executor =
-      std::make_shared<IOThreadPoolExecutor>(8);
-  shared_ptr<Cli> cli = IoConfigurationBuilder::createPromptAwareCli(
-                            executor,
-                            IoConfigurationBuilder::makeConnectionParameters(
-                                "localtest",
-                                "localhost",
-                                "root",
-                                "root",
-                                "",
-                                9999,
-                                chrono::seconds(5),
-                                chrono::seconds(5)))
-                            .get();
-
-  Future<string> future =
-      cli->executeRead(ReadCommand::create("echo 123"))
-          .via(executor.get())
-          .thenError(
-              tag_t<std::runtime_error>{},
-              [&exceptionCaught](std::runtime_error const& e) {
-                MLOG(MDEBUG) << "Read completed with error: " << e.what();
-                exceptionCaught.store(true);
-                return Future<string>(e);
-              });
-
-  cli.reset(); // we destroy the connection
-
-  // Assert the future completed exceptionally
-  for (int i = 0; i < 20; i++) {
-    if (exceptionCaught.load()) {
-      return;
-    } else {
-      this_thread::sleep_for(chrono::seconds(1));
-    }
-  }
-
-  FAIL();
 }
 
 } // namespace cli

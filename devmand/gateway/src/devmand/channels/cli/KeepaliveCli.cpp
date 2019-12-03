@@ -85,7 +85,7 @@ void KeepaliveCli::triggerSendKeepAliveCommand(
     return;
   }
   ReadCommand cmd =
-      ReadCommand::create(keepaliveParameters->keepAliveCommand, false);
+      ReadCommand::create(keepaliveParameters->keepAliveCommand, true);
   MLOG(MDEBUG) << "[" << keepaliveParameters->id << "] (" << cmd.getIdx()
                << ") "
                << "triggerSendKeepAliveCommand created new command";

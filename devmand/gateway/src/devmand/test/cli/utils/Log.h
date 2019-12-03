@@ -21,7 +21,7 @@ using namespace std;
 
 extern atomic_bool loggingInitialized;
 
-extern void initLog();
+extern void initLog(uint32_t verbosity = MDEBUG);
 
 } // namespace log
 } // namespace utils

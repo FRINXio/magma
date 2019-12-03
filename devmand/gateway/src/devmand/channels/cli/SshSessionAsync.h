@@ -55,6 +55,7 @@ class SshSessionAsync : public std::enable_shared_from_this<SshSessionAsync>,
   event* sessionEvent = nullptr;
   spsc_queue<string, capacity<200>> readQueue;
   std::atomic_bool reading;
+  std::atomic_bool callbackFinished;
   std::atomic_bool matchingExpectedOutput;
   struct ReadingState {
     shared_ptr<Promise<string>> promise;
@@ -82,6 +83,7 @@ class SshSessionAsync : public std::enable_shared_from_this<SshSessionAsync>,
   socket_t getSshFd();
   void matchExpectedOutput();
   static void failCurrentRead(runtime_error e, shared_ptr<Promise<string>> ptr);
+  void unregisterEvent();
 };
 
 } // namespace sshsession

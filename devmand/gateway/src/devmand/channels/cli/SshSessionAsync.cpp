@@ -25,6 +25,7 @@ using devmand::channels::cli::sshsession::SshSession;
 using devmand::channels::cli::sshsession::SshSessionAsync;
 using std::lock_guard;
 using std::unique_lock;
+using namespace std::chrono_literals;
 
 SshSessionAsync::SshSessionAsync(
     string _id,
@@ -35,24 +36,41 @@ SshSessionAsync::SshSessionAsync(
           folly::Executor::getKeepAliveToken(_executor.get()))),
       session(_id),
       reading(false),
+      callbackFinished(false),
       matchingExpectedOutput(false) {}
+
+static const int EVENT_FINISH = 9999;
 
 SshSessionAsync::~SshSessionAsync() {
   MLOG(MDEBUG) << "~SshSessionAsync started";
-  if (this->sessionEvent != nullptr &&
-      event_get_base(this->sessionEvent) != nullptr) {
-    event_free(this->sessionEvent);
+
+  // Let the NIO callback finish by injecting artificial event and waiting for
+  // callback to finish
+  if (sessionEvent != nullptr && event_get_base(sessionEvent) != nullptr) {
+    event_active(this->sessionEvent, EVENT_FINISH, -1);
+    while (!callbackFinished) {
+      std::this_thread::sleep_for(100ms);
+    }
   }
+
   this->session.close();
 
   while (reading.load()) {
-    // waiting for any pending read to run out
+    // waiting for last read run out
   }
 
   failCurrentRead(
       runtime_error("Session is closed"), this->readingState.promise);
 
   MLOG(MDEBUG) << "~SshSessionAsync finished";
+}
+
+void SshSessionAsync::unregisterEvent() {
+  if (sessionEvent != nullptr && event_get_base(sessionEvent) != nullptr) {
+    MLOG(MDEBUG) << "SshSessionAsync unregisterEvent";
+    event_free(sessionEvent);
+  }
+  callbackFinished = true;
 }
 
 Future<string> SshSessionAsync::read(int timeoutMillis) {
@@ -95,7 +113,10 @@ void SshSessionAsync::setEvent(event* event) {
 
 void readCallback(evutil_socket_t fd, short what, void* ptr) {
   (void)fd;
-  (void)what;
+  if (what == EVENT_FINISH) {
+    ((SshSessionAsync*)ptr)->unregisterEvent();
+    return;
+  }
   ((SshSessionAsync*)ptr)->readSshDataToBuffer();
   ((SshSessionAsync*)ptr)->processDataInBuffer();
 }

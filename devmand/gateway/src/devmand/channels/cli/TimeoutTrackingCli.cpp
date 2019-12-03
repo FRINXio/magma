@@ -63,17 +63,21 @@ folly::SemiFuture<std::string> TimeoutTrackingCli::executeRead(
   return executeSomething(
              cmd,
              "TTCli.executeRead",
-             [this, cmd]() {
-               return timeoutTrackingParameters->cli->executeRead(cmd);
+             [params = timeoutTrackingParameters, cmd]() {
+               return params->cli->executeRead(cmd);
              })
       .semi();
 }
 
 folly::SemiFuture<std::string> TimeoutTrackingCli::executeWrite(
     const WriteCommand cmd) {
-  return executeSomething(cmd, "TTCli.executeWrite", [this, cmd]() {
-    return timeoutTrackingParameters->cli->executeWrite(cmd);
-  });
+  return executeSomething(
+             cmd,
+             "TTCli.executeWrite",
+             [params = timeoutTrackingParameters, cmd]() {
+               return params->cli->executeWrite(cmd);
+             })
+      .semi();
 }
 
 Future<string> TimeoutTrackingCli::executeSomething(

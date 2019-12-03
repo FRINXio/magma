@@ -38,7 +38,7 @@ using namespace devmand::cartography;
 using namespace devmand::devices;
 using namespace devmand::devices::cli;
 
-using namespace std::chrono_literals;
+using namespace chrono_literals;
 
 class ReconnectingSshTest : public ::testing::Test {
  protected:
@@ -56,21 +56,21 @@ class ReconnectingSshTest : public ::testing::Test {
 
 static DeviceConfig getConfig(
     string port,
-    std::chrono::seconds commandTimeout = defaultCommandTimeout,
-    std::chrono::seconds keepaliveTimeout = defaultKeepaliveInterval) {
+    chrono::seconds commandTimeout = defaultCommandTimeout,
+    chrono::seconds keepaliveTimeout = defaultKeepaliveInterval) {
   DeviceConfig deviceConfig;
   ChannelConfig chnlCfg;
-  std::map<std::string, std::string> kvPairs;
-  kvPairs.insert(std::make_pair("stateCommand", "echo 123"));
-  kvPairs.insert(std::make_pair("port", port));
-  kvPairs.insert(std::make_pair("username", "root"));
-  kvPairs.insert(std::make_pair("password", "root"));
-  kvPairs.insert(std::make_pair(
+  map<string, string> kvPairs;
+  kvPairs.insert(make_pair("stateCommand", "echo 123"));
+  kvPairs.insert(make_pair("port", port));
+  kvPairs.insert(make_pair("username", "root"));
+  kvPairs.insert(make_pair("password", "root"));
+  kvPairs.insert(make_pair(
       configMaxCommandTimeoutSeconds, to_string(commandTimeout.count())));
-  kvPairs.insert(std::make_pair(
+  kvPairs.insert(make_pair(
       configKeepAliveIntervalSeconds, to_string(keepaliveTimeout.count())));
   chnlCfg.kvPairs = kvPairs;
-  deviceConfig.channelConfigs.insert(std::make_pair("cli", chnlCfg));
+  deviceConfig.channelConfigs.insert(make_pair("cli", chnlCfg));
   deviceConfig.ip = "localhost";
   deviceConfig.id = "ubuntu-test-device";
   return deviceConfig;
@@ -79,16 +79,16 @@ static DeviceConfig getConfig(
 static void ensureConnected(const shared_ptr<Cli>& cli) {
   bool connected = false;
   int attempts = 0;
-  while (!connected && attempts++ < 30) {
+  while (!connected && attempts++ < 40) {
     MLOG(MDEBUG) << "Testing connection attempt:" << attempts;
     try {
       const string& echoResult =
           cli->executeRead(ReadCommand::create("echo 123", true)).get();
       EXPECT_EQ("123", boost::algorithm::trim_copy(echoResult));
       connected = true;
-    } catch (const std::exception& e) {
+    } catch (const exception& e) {
       MLOG(MDEBUG) << "Not connected:" << e.what();
-      std::this_thread::sleep_for(500ms);
+      this_thread::sleep_for(500ms);
     }
   }
   EXPECT_TRUE(connected);
@@ -96,8 +96,8 @@ static void ensureConnected(const shared_ptr<Cli>& cli) {
 
 TEST_F(ReconnectingSshTest, commandTimeout) {
   int cmdTimeout = 5;
-  IoConfigurationBuilder ioConfigurationBuilder(getConfig(
-      "9999", std::chrono::seconds(cmdTimeout), std::chrono::seconds(10)));
+  IoConfigurationBuilder ioConfigurationBuilder(
+      getConfig("9999", chrono::seconds(cmdTimeout), chrono::seconds(10)));
   shared_ptr<Cli> cli =
       ioConfigurationBuilder.createAll(ReadCachingCli::createCache());
   ensureConnected(cli);
@@ -109,12 +109,12 @@ TEST_F(ReconnectingSshTest, commandTimeout) {
         try {
           cli->executeRead(ReadCommand::create(sleepCommand, true))
               .get(); // timeout exception
-        } catch (const std::exception& e) {
+        } catch (const exception& e) {
           EXPECT_STREQ("Timed out", e.what());
           throw;
         }
       },
-      std::exception);
+      exception);
 
   ssh->close();
   ssh = startSshServer();
@@ -123,8 +123,8 @@ TEST_F(ReconnectingSshTest, commandTimeout) {
 
 TEST_F(ReconnectingSshTest, serverDisconnectSendCommands) {
   int cmdTimeout = 60;
-  IoConfigurationBuilder ioConfigurationBuilder(getConfig(
-      "9999", std::chrono::seconds(cmdTimeout), std::chrono::seconds(60)));
+  IoConfigurationBuilder ioConfigurationBuilder(
+      getConfig("9999", chrono::seconds(cmdTimeout), chrono::seconds(60)));
   shared_ptr<Cli> cli =
       ioConfigurationBuilder.createAll(ReadCachingCli::createCache());
 
@@ -138,9 +138,7 @@ TEST_F(ReconnectingSshTest, serverDisconnectWaithForKeepalive) {
   int cmdTimeout = 5;
   int keepaliveFreq = 5;
   IoConfigurationBuilder ioConfigurationBuilder(getConfig(
-      "9999",
-      std::chrono::seconds(cmdTimeout),
-      std::chrono::seconds(keepaliveFreq)));
+      "9999", chrono::seconds(cmdTimeout), chrono::seconds(keepaliveFreq)));
   shared_ptr<Cli> cli =
       ioConfigurationBuilder.createAll(ReadCachingCli::createCache());
 
@@ -161,21 +159,34 @@ TEST_F(ReconnectingSshTest, serverDisconnectWaithForKeepalive) {
       FAIL() << "CLI did not reconnect, something went wrong";
     }
 
-    std::this_thread::sleep_for(1s);
+    this_thread::sleep_for(1s);
   }
 }
 
 TEST_F(ReconnectingSshTest, keepalive) {
   int cmdTimeout = 5;
-  int keepaliveTimeout = 10;
+  int keepaliveTimeout = 5;
   IoConfigurationBuilder ioConfigurationBuilder(getConfig(
-      "22",
-      std::chrono::seconds(cmdTimeout),
-      std::chrono::seconds(keepaliveTimeout)));
+      "9999", chrono::seconds(cmdTimeout), chrono::seconds(keepaliveTimeout)));
   shared_ptr<Cli> cli =
       ioConfigurationBuilder.createAll(ReadCachingCli::createCache());
-  std::this_thread::sleep_for(std::chrono::seconds(20));
-  // TODO: check that keepalive was run, move to separate test
+
+  int attempt = 0;
+  while (true) {
+    auto receivedOnServer = ssh->getReceived();
+    // Make sure at least 4 newlines have been executed
+    // 2 for prompt resolution and 2 for keepalives
+    if (count(receivedOnServer.begin(), receivedOnServer.end(), '\n') > 3) {
+      break;
+    }
+    if ((attempt++) == 30) {
+      FAIL()
+          << "Keepalive did not occur, something went wrong. Server received: "
+          << receivedOnServer;
+    }
+
+    this_thread::sleep_for(1s);
+  }
 }
 
 } // namespace cli
