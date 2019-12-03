@@ -8,7 +8,10 @@
 #include <boost/range/size_type.hpp>
 #include <devmand/channels/cli/QueuedCli.h>
 
-namespace devmand::channels::cli {
+namespace devmand {
+namespace channels {
+namespace cli {
+
 using namespace std;
 using namespace folly;
 
@@ -55,14 +58,14 @@ QueuedCli::~QueuedCli() {
          1) { // TODO cancel currently running future
     MLOG(MDEBUG) << "[" << id << "] "
                  << "~QCli sleeping";
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    this_thread::sleep_for(chrono::seconds(1));
   }
   queuedParameters = nullptr;
   MLOG(MDEBUG) << "[" << id << "] "
                << "~QCli done";
 }
 
-folly::SemiFuture<std::string> QueuedCli::executeRead(const ReadCommand cmd) {
+folly::SemiFuture<string> QueuedCli::executeRead(const ReadCommand cmd) {
   boost::recursive_mutex::scoped_lock scoped_lock(queuedParameters->mutex);
   return executeSomething(
       cmd, "QCli.executeRead", [params = queuedParameters, cmd]() {
@@ -70,14 +73,15 @@ folly::SemiFuture<std::string> QueuedCli::executeRead(const ReadCommand cmd) {
       });
 }
 
-folly::SemiFuture<std::string> QueuedCli::executeWrite(const WriteCommand cmd) {
+folly::SemiFuture<string> QueuedCli::executeWrite(const WriteCommand cmd) {
   boost::recursive_mutex::scoped_lock scoped_lock(queuedParameters->mutex);
   Command command = cmd;
   if (!command.isMultiCommand()) {
     MLOG(MWARNING) << "[" << queuedParameters->id << "] "
                    << "Called executeWrite with a single command " << cmd
                    << ", executeRead() should have been used";
-    return executeRead(ReadCommand::create(cmd)); // TODO what is appropriate?
+    // Single line config command, execute with read
+    return executeRead(ReadCommand::create(cmd));
   }
 
   const vector<Command>& commands = command.splitMultiCommand();
@@ -111,7 +115,7 @@ SemiFuture<string> QueuedCli::executeSomething(
     const Command& cmd,
     const string& prefix,
     function<SemiFuture<string>()> innerFunc) {
-  shared_ptr<Promise<string>> promise = std::make_shared<Promise<string>>();
+  shared_ptr<Promise<string>> promise = make_shared<Promise<string>>();
   QueueEntry queueEntry = QueueEntry{move(innerFunc), promise, cmd, prefix};
   MLOG(MDEBUG) << "[" << queuedParameters->id << "] ("
                << queueEntry.command.getIdx() << ") " << prefix
@@ -128,69 +132,79 @@ SemiFuture<string> QueuedCli::executeSomething(
  * Start queue reading on consumer thread if queue contains new items.
  * It is safe to call this method anytime, it is thread safe.
  */
-// TODO: refactor lambdas into separate methods
 void QueuedCli::triggerDequeue(shared_ptr<QueuedParameters> queuedParameters) {
-  if (queuedParameters->shutdown)
+  if (queuedParameters->shutdown) {
     return;
+  }
+
   // switch to consumer thread
   via(queuedParameters->serialExecutorKeepAlive, [params = queuedParameters]() {
     MLOG(MDEBUG) << "[" << params->id << "] "
                  << "QCli.isProcessing:" << params->isProcessing
                  << ", queue size:" << params->queue.size();
     // do nothing if still waiting for remote device to respond
-    if (!params->isProcessing) {
-      QueueEntry queueEntry;
-      if (params->queue.try_dequeue(queueEntry)) {
-        if (params->shutdown) {
-          MLOG(MDEBUG) << "[" << params->id << "] ("
-                       << queueEntry.command.getIdx() << ") "
-                       << queueEntry.loggingPrefix << " Shutting down";
-          queueEntry.promise->setException(
-              runtime_error("QCli: Shutting down"));
-          return;
-        }
-        params->isProcessing = true;
-        SemiFuture<string> cliFuture = queueEntry.obtainFutureFromCli();
-        MLOG(MDEBUG) << "[" << params->id << "] ("
-                     << queueEntry.command.getIdx() << ") "
-                     << queueEntry.loggingPrefix
-                     << " dequeued and cli future obtained";
-        move(cliFuture)
-            .via(params->serialExecutorKeepAlive)
-            .then(
-                params->serialExecutorKeepAlive,
-                [params, queueEntry](std::string result) -> Future<Unit> {
-                  // after cliFuture completes, finish processing on consumer
-                  // thread
-                  MLOG(MDEBUG) << "[" << params->id << "] ("
-                               << queueEntry.command.getIdx() << ") "
-                               << queueEntry.loggingPrefix << " succeeded";
-                  params->isProcessing = false;
-                  queueEntry.promise->setValue(result);
-                  triggerDequeue(params);
-                  return Unit{};
-                })
-            .thenError(
-                folly::tag_t<std::exception>{},
-                [params, queueEntry](std::exception const& e) -> Future<Unit> {
-                  MLOG(MDEBUG)
-                      << "[" << params->id << "] ("
-                      << queueEntry.command.getIdx() << ") "
-                      << queueEntry.loggingPrefix << " failed  with exception '"
-                      << e.what() << "'";
-                  if (!params->shutdown) {
-                    params->isProcessing = false;
-                  }
-                  auto cpException = runtime_error(e.what());
-                  // TODO: exception type is not preserved,
-                  // queueEntry.promise->setException(e) results in
-                  // std::exception
-                  queueEntry.promise->setException(cpException);
-                  triggerDequeue(params);
-                  return Unit{};
-                });
-      }
+    if (params->isProcessing) {
+      return;
     }
+    QueueEntry queueEntry;
+    if (!params->queue.try_dequeue(queueEntry)) {
+      return;
+    }
+
+    if (params->shutdown) {
+      MLOG(MDEBUG) << "[" << params->id << "] (" << queueEntry.command.getIdx()
+                   << ") " << queueEntry.loggingPrefix << " Shutting down";
+      queueEntry.promise->setException(runtime_error("QCli: Shutting down"));
+      return;
+    }
+
+    params->isProcessing = true;
+    SemiFuture<string> cliFuture = queueEntry.obtainFutureFromCli();
+    MLOG(MDEBUG) << "[" << params->id << "] (" << queueEntry.command.getIdx()
+                 << ") " << queueEntry.loggingPrefix
+                 << " dequeued and cli future obtained";
+
+    move(cliFuture)
+        .via(params->serialExecutorKeepAlive)
+        .then(
+            params->serialExecutorKeepAlive,
+            [params, queueEntry](string result) -> Future<Unit> {
+              // after cliFuture completes, finish processing on consumer thread
+              onDequeueSuccess(params, queueEntry, result);
+              return unit;
+            })
+        .thenError([params, queueEntry](exception_wrapper e) -> Future<Unit> {
+          onDequeueError(params, queueEntry, e);
+          return unit;
+        });
   });
 }
-} // namespace devmand::channels::cli
+
+void QueuedCli::onDequeueSuccess(
+    const shared_ptr<QueuedParameters>& params,
+    const QueuedCli::QueueEntry& queueEntry,
+    const string& result) {
+  MLOG(MDEBUG) << "[" << params->id << "] (" << queueEntry.command.getIdx()
+               << ") " << queueEntry.loggingPrefix << " succeeded";
+  params->isProcessing = false;
+  queueEntry.promise->setValue(result);
+  triggerDequeue(params);
+}
+
+void QueuedCli::onDequeueError(
+    const shared_ptr<QueuedParameters>& params,
+    const QueuedCli::QueueEntry& queueEntry,
+    const exception_wrapper& e) {
+  MLOG(MDEBUG) << "[" << params->id << "] (" << queueEntry.command.getIdx()
+               << ") " << queueEntry.loggingPrefix
+               << " failed  with exception '" << e.what() << "'";
+  if (!params->shutdown) {
+    params->isProcessing = false;
+  }
+  queueEntry.promise->setException(e);
+  triggerDequeue(params);
+}
+
+} // namespace cli
+} // namespace channels
+} // namespace devmand

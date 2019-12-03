@@ -35,12 +35,10 @@ class EchoCli : public Cli {
 class ErrCli : public Cli {
  public:
   folly::SemiFuture<std::string> executeRead(const ReadCommand cmd) override {
-    throw runtime_error(cmd.raw());
     return folly::Future<string>(runtime_error(cmd.raw()));
   }
 
   folly::SemiFuture<std::string> executeWrite(const WriteCommand cmd) override {
-    throw runtime_error(cmd.raw());
     return folly::Future<string>(runtime_error(cmd.raw()));
   }
 };

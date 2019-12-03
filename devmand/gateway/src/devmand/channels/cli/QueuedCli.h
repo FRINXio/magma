@@ -66,6 +66,14 @@ class QueuedCli : public Cli {
       function<SemiFuture<string>()> innerFunc);
 
   static void triggerDequeue(shared_ptr<QueuedParameters> queuedParameters);
+  static void onDequeueSuccess(
+      const shared_ptr<QueuedParameters>& queuedParameters,
+      const QueueEntry& queueEntry,
+      const string& result);
+  static void onDequeueError(
+      const shared_ptr<QueuedParameters>& queuedParameters,
+      const QueueEntry& queueEntry,
+      const exception_wrapper& e);
 
  public:
   static std::shared_ptr<QueuedCli>

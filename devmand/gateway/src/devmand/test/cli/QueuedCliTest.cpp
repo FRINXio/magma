@@ -180,6 +180,42 @@ TEST_F(QueuedCliTest, cleanDestructOnSuccess) {
   testExec->join();
 }
 
+class CustomErr : public runtime_error {
+ public:
+  CustomErr(string msg) : runtime_error(msg){};
+};
+
+class CustomErrCli : public Cli {
+ public:
+  folly::SemiFuture<std::string> executeRead(const ReadCommand cmd) override {
+    return folly::Future<string>(CustomErr(cmd.raw()));
+  }
+
+  folly::SemiFuture<std::string> executeWrite(const WriteCommand cmd) override {
+    return folly::Future<string>(CustomErr(cmd.raw()));
+  }
+};
+
+TEST_F(QueuedCliTest, preserveExType) {
+  auto testExec = make_shared<CPUThreadPoolExecutor>(1);
+  auto delegate = getMockCli<CustomErrCli>(0, testExec);
+  auto testedCli = QueuedCli::make(
+      "testConnection", delegate, make_shared<CPUThreadPoolExecutor>(1));
+  try {
+    testedCli->executeRead(ReadCommand::create("command"))
+        .via(testExec.get())
+        .get(10s);
+    FAIL() << "No exception thrown";
+  } catch (const CustomErr& e) {
+    // Proper ex type caught
+  } catch (const exception& e) {
+    FAIL() << "Wrong exception thrown";
+  }
+
+  MLOG(MDEBUG) << "Waiting for test executor to finish";
+  testExec->join();
+}
+
 } // namespace cli
 } // namespace test
 } // namespace devmand
