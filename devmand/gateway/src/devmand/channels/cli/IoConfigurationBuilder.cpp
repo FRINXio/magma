@@ -43,18 +43,16 @@ IoConfigurationBuilder::IoConfigurationBuilder(
       deviceConfig.ip,
       plaintextCliKv.at("username"),
       plaintextCliKv.at("password"),
-      plaintextCliKv.find("flavour") != plaintextCliKv.end()
-          ? plaintextCliKv.at("flavour")
-          : "",
+      loadConfigValue(plaintextCliKv, "flavour", ""),
       std::stoi(plaintextCliKv.at("port")),
-      loadTimeout(
-          plaintextCliKv,
-          configKeepAliveIntervalSeconds,
-          defaultKeepaliveInterval),
-      loadTimeout(
-          plaintextCliKv,
-          configMaxCommandTimeoutSeconds,
-          defaultCommandTimeout),
+      toSeconds(loadConfigValue(
+          plaintextCliKv, configKeepAliveIntervalSeconds, "60")),
+      toSeconds(loadConfigValue(
+          plaintextCliKv, configMaxCommandTimeoutSeconds, "60")),
+      toSeconds(
+          loadConfigValue(plaintextCliKv, reconnectingQuietPeriodConfig, "5")),
+      std::stol(
+          loadConfigValue(plaintextCliKv, sshConnectionTimeoutConfig, "30")),
       engine.getTimekeeper(),
       engine.getExecutor(Engine::executorRequestType::sshCli),
       engine.getExecutor(Engine::executorRequestType::paCli),
@@ -74,15 +72,8 @@ shared_ptr<Cli> IoConfigurationBuilder::createAll(
   return createAllUsingFactory(commandCache);
 }
 
-chrono::seconds IoConfigurationBuilder::loadTimeout(
-    const std::map<std::string, std::string>& plaintextCliKv,
-    const string& configKey,
-    chrono::seconds defaultValue) {
-  if (plaintextCliKv.find(configKey) != plaintextCliKv.end()) {
-    return chrono::seconds(stoi(plaintextCliKv.at(configKey)));
-  } else {
-    return defaultValue;
-  }
+chrono::seconds IoConfigurationBuilder::toSeconds(const string& value) {
+  return chrono::seconds(stoi(value));
 }
 
 shared_ptr<Cli> IoConfigurationBuilder::createAllUsingFactory(
@@ -116,7 +107,8 @@ shared_ptr<Cli> IoConfigurationBuilder::createAllUsingFactory(
       connectionParameters->id,
       connectionParameters->rExecutor,
       move(cliFactory),
-      connectionParameters->timekeeper);
+      connectionParameters->timekeeper,
+      connectionParameters->reconnectingQuietPeriod);
   // create keepalive cli
   shared_ptr<KeepaliveCli> kaCli = KeepaliveCli::make(
       connectionParameters->id,
@@ -141,7 +133,8 @@ Future<shared_ptr<Cli>> IoConfigurationBuilder::createPromptAwareCli(
                << "Opening shell";
   // TODO: do this using future chaining
   session
-      ->openShell(params->ip, params->port, params->username, params->password)
+      ->openShell(params->ip, params->port, params->username, params->password,
+                  params->sshConnectionTimeout)
       .get();
 
   MLOG(MDEBUG) << "[" << params->id << "] "
@@ -186,6 +179,8 @@ IoConfigurationBuilder::makeConnectionParameters(
     int port,
     chrono::seconds kaTimeout,
     chrono::seconds cmdTimeout,
+    chrono::seconds reconnectingQuietPeriod,
+    long sshConnectionTimeout,
     shared_ptr<Timekeeper> timekeeper,
     shared_ptr<Executor> sshExecutor,
     shared_ptr<Executor> paExecutor,
@@ -205,7 +200,8 @@ IoConfigurationBuilder::makeConnectionParameters(
   connectionParameters->flavour = CliFlavour::create(flavour);
   connectionParameters->kaTimeout = kaTimeout;
   connectionParameters->cmdTimeout = cmdTimeout;
-
+  connectionParameters->reconnectingQuietPeriod = reconnectingQuietPeriod;
+  connectionParameters->sshConnectionTimeout = sshConnectionTimeout;
   connectionParameters->timekeeper = timekeeper;
   connectionParameters->sshExecutor = sshExecutor;
   connectionParameters->paExecutor = paExecutor;
@@ -216,6 +212,13 @@ IoConfigurationBuilder::makeConnectionParameters(
   connectionParameters->kaExecutor = kaExecutor;
 
   return connectionParameters;
+}
+
+string IoConfigurationBuilder::loadConfigValue(
+    const std::map<std::string, std::string>& config,
+    const string& key,
+    const string& defaultValue) {
+  return config.find(key) != config.end() ? config.at(key) : defaultValue;
 }
 
 } // namespace cli

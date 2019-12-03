@@ -29,6 +29,8 @@ static constexpr auto configKeepAliveIntervalSeconds =
     "keepAliveIntervalSeconds";
 static constexpr auto configMaxCommandTimeoutSeconds =
     "maxCommandTimeoutSeconds";
+static constexpr auto reconnectingQuietPeriodConfig = "reconnectingQuietPeriod";
+static constexpr auto sshConnectionTimeoutConfig = "sshConnectionTimeout";
 
 class IoConfigurationBuilder {
  public:
@@ -49,6 +51,8 @@ class IoConfigurationBuilder {
     shared_ptr<CliFlavour> flavour;
     chrono::seconds kaTimeout;
     chrono::seconds cmdTimeout;
+    chrono::seconds reconnectingQuietPeriod;
+    long sshConnectionTimeout; /* in seconds */
     shared_ptr<Timekeeper> timekeeper;
     shared_ptr<Executor> sshExecutor;
     shared_ptr<Executor> paExecutor;
@@ -71,6 +75,8 @@ class IoConfigurationBuilder {
       int port,
       chrono::seconds kaTimeout,
       chrono::seconds cmdTimeout,
+      chrono::seconds reconnectingQuietPeriod,
+      long sshConnectionTimeout,
       shared_ptr<Timekeeper> timekeeper,
       shared_ptr<Executor> sshExecutor,
       shared_ptr<Executor> paExecutor,
@@ -85,9 +91,11 @@ class IoConfigurationBuilder {
 
   shared_ptr<Cli> createAllUsingFactory(shared_ptr<CliCache> commandCache);
 
-  static chrono::seconds loadTimeout(
+  static chrono::seconds toSeconds(const string& value);
+
+  static string loadConfigValue(
       const std::map<std::string, std::string>& plaintextCliKv,
-      const string& configKey,
-      chrono::seconds defaultValue);
+      const string& key,
+      const string& defaultValue);
 };
 } // namespace devmand::channels::cli

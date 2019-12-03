@@ -53,7 +53,8 @@ void SshSession::openShell(
     const string& ip,
     int port,
     const string& username,
-    const string& password) {
+    const string& password,
+    const long timeout) {
   MLOG(MINFO) << "[" << id << "] "
               << "Connecting to host: " << ip << " port: " << port;
   sessionState.ip = ip;
@@ -62,12 +63,10 @@ void SshSession::openShell(
   sessionState.username = password;
   sessionState.session.store(ssh_new());
   ssh_options_set(sessionState.session, SSH_OPTIONS_USER, username.c_str());
-  // ssh_options_set(sessionState.session, SSH_OPTIONS_SSH_DIR, "%s/.ssh");
   ssh_options_set(sessionState.session, SSH_OPTIONS_HOST, ip.c_str());
   ssh_options_set(sessionState.session, SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
   ssh_options_set(sessionState.session, SSH_OPTIONS_PORT, &port);
   // Connection timeout in seconds
-  long timeout = 10; // TODO: make configurable
   ssh_options_set(sessionState.session, SSH_OPTIONS_TIMEOUT, &timeout);
 
   checkSuccess(ssh_connect(sessionState.session), SSH_OK);

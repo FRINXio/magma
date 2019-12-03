@@ -83,11 +83,18 @@ Future<Unit> SshSessionAsync::openShell(
     const string& ip,
     int port,
     const string& username,
-    const string& password) {
+    const string& password,
+    const long sshConnectionTimeout) {
   return via(
       serialExecutor.get(),
-      [dis = shared_from_this(), ip, port, username, password] {
-        dis->session.openShell(ip, port, username, password);
+      [dis = shared_from_this(),
+       ip,
+       port,
+       username,
+       password,
+       sshConnectionTimeout] {
+        dis->session.openShell(
+            ip, port, username, password, sshConnectionTimeout);
       });
 }
 

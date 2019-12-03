@@ -32,7 +32,7 @@ class ReconnectingCli : public Cli {
       shared_ptr<Executor> executor,
       function<SemiFuture<shared_ptr<Cli>>()>&& createCliStack,
       shared_ptr<Timekeeper> timekeeper,
-      chrono::milliseconds quietPeriod = chrono::seconds(5));
+      chrono::milliseconds quietPeriod);
 
   ~ReconnectingCli() override;
 

@@ -76,7 +76,9 @@ class SshSessionAsync : public std::enable_shared_from_this<SshSessionAsync>,
       const string& ip,
       int port,
       const string& username,
-      const string& password);
+      const string& password,
+      const long sshConnectionTimeout = 10);
+
   void setEvent(event*);
   void readSshDataToBuffer();
   void processDataInBuffer();
