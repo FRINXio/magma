@@ -28,10 +28,6 @@ namespace cli {
 using namespace devmand::channels::cli;
 using namespace std;
 
-// TODO get out of here, this will be a shared single instance for all
-// structured devices
-auto mreg = std::unique_ptr<ModelRegistry>(new ModelRegistry());
-
 using Nis = openconfig::openconfig_network_instance::NetworkInstances;
 using Ni = Nis::NetworkInstance;
 using Vlan = Ni::Vlans::Vlan;
@@ -303,16 +299,20 @@ unique_ptr<devices::Device> StructuredUbntDevice::createDeviceWithEngine(
   const std::shared_ptr<Channel>& channel = std::make_shared<Channel>(
       deviceConfig.id, ioConfigurationBuilder.createAll(cmdCache));
 
-  return unique_ptr<StructuredUbntDevice>(
-      new StructuredUbntDevice(app, deviceConfig.id, channel, cmdCache));
+  return unique_ptr<StructuredUbntDevice>(new StructuredUbntDevice(
+      app, deviceConfig.id, channel, engine.getModelRegistry(), cmdCache));
 }
 
 StructuredUbntDevice::StructuredUbntDevice(
     Application& application,
     const Id id_,
     const shared_ptr<Channel> _channel,
+    const std::shared_ptr<ModelRegistry> _mreg,
     const shared_ptr<CliCache> _cmdCache)
-    : Device(application, id_, true), channel(_channel), cmdCache(_cmdCache) {}
+    : Device(application, id_, true),
+      channel(_channel),
+      cmdCache(_cmdCache),
+      mreg(_mreg) {}
 
 void StructuredUbntDevice::setConfig(const dynamic& config) {
   const string& json = folly::toJson(config);
