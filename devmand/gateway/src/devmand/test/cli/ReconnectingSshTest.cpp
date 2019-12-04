@@ -39,16 +39,15 @@ using namespace devmand::devices::cli;
 
 using namespace chrono_literals;
 
-// test log initializer must be first to set up logging for tests correctly
-static devmand::test::utils::log::TestLogInitializer log;
-static channels::cli::Engine cliEngine;
-
 class ReconnectingSshTest : public ::testing::Test {
  protected:
   shared_ptr<server> ssh;
+  unique_ptr<channels::cli::Engine> cliEngine;
 
   void SetUp() override {
+    devmand::test::utils::log::initLog();
     ssh = startSshServer();
+    cliEngine = make_unique<channels::cli::Engine>();
   }
 
   void TearDown() override {
@@ -59,7 +58,7 @@ class ReconnectingSshTest : public ::testing::Test {
 static DeviceConfig getConfig(
     string port,
     chrono::seconds commandTimeout = defaultCommandTimeout,
-    chrono::seconds keepaliveTimeout = defaultKeepaliveInterval) {
+    chrono::seconds keepaliveTimeout = 5s) {
   DeviceConfig deviceConfig;
   ChannelConfig chnlCfg;
   map<string, string> kvPairs;
@@ -101,7 +100,7 @@ TEST_F(ReconnectingSshTest, commandTimeout) {
   IoConfigurationBuilder ioConfigurationBuilder(
       getConfig(
           "9999", std::chrono::seconds(cmdTimeout), std::chrono::seconds(10)),
-      cliEngine);
+      *cliEngine);
   shared_ptr<Cli> cli =
       ioConfigurationBuilder.createAll(ReadCachingCli::createCache());
   ensureConnected(cli);
@@ -130,7 +129,7 @@ TEST_F(ReconnectingSshTest, serverDisconnectSendCommands) {
   IoConfigurationBuilder ioConfigurationBuilder(
       getConfig(
           "9999", std::chrono::seconds(cmdTimeout), std::chrono::seconds(60)),
-      cliEngine);
+      *cliEngine);
   shared_ptr<Cli> cli =
       ioConfigurationBuilder.createAll(ReadCachingCli::createCache());
 
@@ -148,7 +147,7 @@ TEST_F(ReconnectingSshTest, serverDisconnectWaithForKeepalive) {
           "9999",
           std::chrono::seconds(cmdTimeout),
           std::chrono::seconds(keepaliveFreq)),
-      cliEngine);
+      *cliEngine);
   shared_ptr<Cli> cli =
       ioConfigurationBuilder.createAll(ReadCachingCli::createCache());
 
@@ -181,7 +180,7 @@ TEST_F(ReconnectingSshTest, keepalive) {
           "9999",
           std::chrono::seconds(cmdTimeout),
           std::chrono::seconds(keepaliveTimeout)),
-      cliEngine);
+      *cliEngine);
   shared_ptr<Cli> cli =
       ioConfigurationBuilder.createAll(ReadCachingCli::createCache());
 

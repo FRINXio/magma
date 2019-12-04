@@ -28,11 +28,6 @@ void initLog(uint32_t verbosity) {
   MLOG(MDEBUG) << "Logging for test initialized";
 }
 
-TestLogInitializer::TestLogInitializer() {
-  initLog();
-  MLOG(MDEBUG) << "Initialized test logging";
-}
-
 } // namespace log
 } // namespace utils
 } // namespace test

@@ -34,14 +34,6 @@ static constexpr auto sshConnectionTimeoutConfig = "sshConnectionTimeout";
 
 class IoConfigurationBuilder {
  public:
-  IoConfigurationBuilder(
-      const DeviceConfig& deviceConfig,
-      channels::cli::Engine& engine);
-
-  ~IoConfigurationBuilder();
-
-  shared_ptr<Cli> createAll(shared_ptr<CliCache> commandCache);
-
   struct ConnectionParameters {
     string username;
     string password;
@@ -62,6 +54,15 @@ class IoConfigurationBuilder {
     shared_ptr<Executor> rExecutor;
     shared_ptr<Executor> kaExecutor;
   };
+
+  IoConfigurationBuilder(
+      const DeviceConfig& deviceConfig,
+      channels::cli::Engine& engine);
+  IoConfigurationBuilder(shared_ptr<ConnectionParameters> _connectionParams);
+
+  ~IoConfigurationBuilder();
+
+  shared_ptr<Cli> createAll(shared_ptr<CliCache> commandCache);
 
   static Future<shared_ptr<Cli>> createPromptAwareCli(
       shared_ptr<ConnectionParameters> params);

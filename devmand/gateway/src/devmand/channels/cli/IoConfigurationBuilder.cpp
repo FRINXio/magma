@@ -33,6 +33,10 @@ using devmand::channels::cli::sshsession::SshSessionAsync;
 using folly::EvictingCacheMap;
 
 IoConfigurationBuilder::IoConfigurationBuilder(
+    shared_ptr<ConnectionParameters> _connectionParams)
+    : connectionParameters(_connectionParams){}
+
+IoConfigurationBuilder::IoConfigurationBuilder(
     const DeviceConfig& deviceConfig,
     channels::cli::Engine& engine) {
   const std::map<std::string, std::string>& plaintextCliKv =

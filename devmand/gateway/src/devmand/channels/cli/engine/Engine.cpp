@@ -20,9 +20,7 @@ namespace devmand {
 namespace channels {
 namespace cli {
 
-void Engine::closeSsh() {
-  ssh_finalize();
-}
+void Engine::closeSsh() {}
 
 void Engine::closeLogging() {
   spdlog::drop("ydk");

@@ -32,14 +32,15 @@ using namespace std;
 using namespace folly;
 using namespace devmand::test::utils::ssh;
 
-static channels::cli::Engine cliEngine;
 class PlaintextCliDeviceTest : public ::testing::Test {
  protected:
   shared_ptr<server> ssh;
   Application app;
+  unique_ptr<channels::cli::Engine> cliEngine;
 
   void SetUp() override {
     devmand::test::utils::log::initLog();
+    cliEngine = make_unique<channels::cli::Engine>();
     ssh = startSshServer();
   }
 
@@ -59,7 +60,7 @@ TEST_F(PlaintextCliDeviceTest, checkEcho) {
   const shared_ptr<EchoCli>& echoCli = make_shared<EchoCli>();
   const shared_ptr<Channel>& channel = make_shared<Channel>("test", echoCli);
   unique_ptr<devices::Device> dev = make_unique<PlaintextCliDevice>(
-      app, cliEngine, deviceConfig.id, "show interfaces brief", channel);
+      app, *cliEngine, deviceConfig.id, "show interfaces brief", channel);
 
   shared_ptr<State> state = dev->getState();
   const folly::dynamic& stateResult = state->collect().get();
@@ -77,7 +78,7 @@ static DeviceConfig getConfig(string port) {
   kvPairs.insert(make_pair("port", port));
   kvPairs.insert(make_pair("username", "root"));
   kvPairs.insert(make_pair("password", "root"));
-  kvPairs.insert(make_pair("keepAliveIntervalSeconds", "60"));
+  kvPairs.insert(make_pair("keepAliveIntervalSeconds", "5"));
   kvPairs.insert(make_pair("maxCommandTimeoutSeconds", "60"));
   chnlCfg.kvPairs = kvPairs;
   deviceConfig.channelConfigs.insert(make_pair("cli", chnlCfg));
@@ -88,7 +89,7 @@ static DeviceConfig getConfig(string port) {
 
 TEST_F(PlaintextCliDeviceTest, plaintextCliDevicesError) {
   auto plaintextDevice =
-      PlaintextCliDevice::createDeviceWithEngine(app, getConfig("9998"), cliEngine);
+      PlaintextCliDevice::createDeviceWithEngine(app, getConfig("9998"), *cliEngine);
   const shared_ptr<State>& ptr = plaintextDevice->getState();
   auto state = ptr->collect().get();
 
@@ -99,7 +100,7 @@ TEST_F(PlaintextCliDeviceTest, plaintextCliDevicesError) {
 
 TEST_F(PlaintextCliDeviceTest, plaintextCliDevice) {
   unique_ptr<Device> dev =
-      PlaintextCliDevice::createDeviceWithEngine(app, getConfig("9999"), cliEngine);
+      PlaintextCliDevice::createDeviceWithEngine(app, getConfig("9999"), *cliEngine);
 
   int i = 0;
   string output = "";

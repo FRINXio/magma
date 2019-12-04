@@ -20,11 +20,6 @@ using namespace std;
 
 extern void initLog(uint32_t verbosity = MDEBUG);
 
-class TestLogInitializer {
- public:
-  TestLogInitializer();
-};
-
 } // namespace log
 } // namespace utils
 } // namespace test
