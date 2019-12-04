@@ -420,6 +420,8 @@ static const string EXPECTED_OUTPUT =
 
 TEST_F(StructuredUbntDeviceTest, getState) {
   devmand::Application app;
+  app.init();
+
   cartography::DeviceConfig deviceConfig;
   devmand::cartography::ChannelConfig chnlCfg;
   std::map<std::string, std::string> kvPairs;

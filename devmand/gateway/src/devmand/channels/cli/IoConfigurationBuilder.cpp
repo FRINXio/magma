@@ -133,8 +133,12 @@ Future<shared_ptr<Cli>> IoConfigurationBuilder::createPromptAwareCli(
                << "Opening shell";
   // TODO: do this using future chaining
   session
-      ->openShell(params->ip, params->port, params->username, params->password,
-                  params->sshConnectionTimeout)
+      ->openShell(
+          params->ip,
+          params->port,
+          params->username,
+          params->password,
+          params->sshConnectionTimeout)
       .get();
 
   MLOG(MDEBUG) << "[" << params->id << "] "

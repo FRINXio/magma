@@ -28,10 +28,6 @@ namespace cli {
 using namespace devmand::channels::cli;
 using namespace std;
 
-// TODO get out of here, this will be a shared single instance for all
-// structured devices
-auto mreg = std::unique_ptr<ModelRegistry>(new ModelRegistry());
-
 using Nis = openconfig::openconfig_network_instance::NetworkInstances;
 using Ni = Nis::NetworkInstance;
 using Vlan = Ni::Vlans::Vlan;
@@ -311,7 +307,7 @@ StructuredUbntDevice::StructuredUbntDevice(
 
 void StructuredUbntDevice::setConfig(const dynamic& config) {
   const string& json = folly::toJson(config);
-  auto& bundle = mreg->getBundle(Model::OPENCONFIG_0_1_6);
+  auto& bundle = app.getCliEngine().mreg->getBundle(Model::OPENCONFIG_0_1_6);
   const shared_ptr<OpenconfigInterfaces>& ydkModel =
       make_shared<OpenconfigInterfaces>();
   const shared_ptr<Entity> decodedIfcEntity = bundle.decode(json, ydkModel);
@@ -343,7 +339,7 @@ shared_ptr<State> StructuredUbntDevice::getState() {
   auto state = State::make(*reinterpret_cast<MetricSink*>(&app), getId());
   state->setStatus(true);
 
-  auto& bundle = mreg->getBundle(Model::OPENCONFIG_0_1_6);
+  auto& bundle = app.getCliEngine().mreg->getBundle(Model::OPENCONFIG_0_1_6);
 
   // TODO the conversion here is: Object -> Json -> folly:dynamic
   // the json step is unnecessary
