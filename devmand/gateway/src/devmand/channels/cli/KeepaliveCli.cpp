@@ -5,12 +5,15 @@
 // LICENSE file in the root directory of this source tree. An additional grant
 // of patent rights can be found in the PATENTS file in the same directory.
 
+#include <devmand/channels/cli/CancelableWTCallback.h>
+#include <devmand/channels/cli/CliThreadWheelTimekeeper.h>
 #include <devmand/channels/cli/Command.h>
 #include <devmand/channels/cli/KeepaliveCli.h>
 #include <magma_logging.h>
 
 namespace devmand::channels::cli {
 
+using devmand::channels::cli::CancelableWTCallback;
 using devmand::channels::cli::Command;
 using namespace std;
 using namespace folly;
@@ -54,7 +57,9 @@ KeepaliveCli::KeepaliveCli(
       /* keepAliveCommand */ move(_keepAliveCommand),
       /* heartbeatInterval */ _heartbeatInterval,
       /* backoffAfterKeepaliveTimeout */ _backoffAfterKeepaliveTimeout,
-      /* shutdown */ {false}});
+      /* shutdown */ {false},
+      {},
+      {}});
 
   MLOG(MDEBUG) << "[" << _id << "] "
                << "initialized";
@@ -71,6 +76,11 @@ KeepaliveCli::~KeepaliveCli() {
     MLOG(MDEBUG) << "[" << id << "] "
                  << "~KeepaliveCli sleeping";
     std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    if (keepaliveParameters->cb.use_count() >= 1) {
+      keepaliveParameters->cb->callbackCanceled();
+      keepaliveParameters->cb.reset();
+    }
   }
   keepaliveParameters = nullptr;
   MLOG(MDEBUG) << "[" << id << "] "
@@ -100,8 +110,12 @@ void KeepaliveCli::triggerSendKeepAliveCommand(
       .thenValue([params = keepaliveParameters, cmd](auto) -> SemiFuture<Unit> {
         MLOG(MDEBUG) << "[" << params->id << "] (" << cmd << ") "
                      << "Creating sleep future";
-        return futures::sleep(
-            params->heartbeatInterval, params->timekeeper.get());
+        shared_ptr<CancelableWTCallback> cb =
+            std::static_pointer_cast<CliThreadWheelTimekeeper>(
+                params->timekeeper)
+                ->cancelableSleep(params->heartbeatInterval);
+        params->setCurrentCallback(cb);
+        return cb->getSemiFuture();
       })
       .thenValue([keepaliveParameters, cmd](auto) -> Unit {
         MLOG(MDEBUG) << "[" << keepaliveParameters->id << "] (" << cmd << ") "
@@ -113,6 +127,11 @@ void KeepaliveCli::triggerSendKeepAliveCommand(
                   cmd](const exception_wrapper& e) {
         MLOG(MINFO) << "[" << params->id << "] (" << cmd << ") "
                     << "Got error running keepalive, backing off " << e.what();
+
+        //thrown by sleep - we terminate prematurely because we are in the destructor
+        if (e.is_compatible_with<folly::FutureNoTimekeeper>()) {
+            return makeFuture(unit);
+        }
 
         return futures::sleep(
                    params->backoffAfterKeepaliveTimeout,

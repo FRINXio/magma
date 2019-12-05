@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <boost/thread/mutex.hpp>
+#include <devmand/channels/cli/CancelableWTCallback.h>
 #include <devmand/channels/cli/Cli.h>
 #include <folly/Executor.h>
 #include <folly/executors/SerialExecutor.h>
@@ -15,6 +17,7 @@
 
 namespace devmand::channels::cli {
 using namespace std;
+using devmand::channels::cli::CancelableWTCallback;
 using devmand::channels::cli::Command;
 
 static constexpr chrono::seconds defaultKeepaliveInterval = chrono::seconds(60);
@@ -50,8 +53,15 @@ class KeepaliveCli : public Cli {
     chrono::milliseconds heartbeatInterval;
     chrono::milliseconds backoffAfterKeepaliveTimeout;
     atomic<bool> shutdown;
-
+    boost::mutex mutex;
+    shared_ptr<CancelableWTCallback> cb;
     KeepaliveParameters(KeepaliveParameters&&) = default;
+
+   public:
+    void setCurrentCallback(shared_ptr<CancelableWTCallback> _cb) {
+      boost::mutex::scoped_lock scoped_lock(this->mutex);
+      this->cb = _cb;
+    }
   };
 
   shared_ptr<KeepaliveParameters> keepaliveParameters;
