@@ -22,7 +22,7 @@ shared_ptr<KeepaliveCli> KeepaliveCli::make(
     string id,
     shared_ptr<Cli> cli,
     shared_ptr<folly::Executor> parentExecutor,
-    shared_ptr<folly::Timekeeper> timekeeper,
+    shared_ptr<CliThreadWheelTimekeeper> timekeeper,
     chrono::milliseconds heartbeatInterval,
     string keepAliveCommand,
     chrono::milliseconds backoffAfterKeepaliveTimeout) {
@@ -42,7 +42,7 @@ KeepaliveCli::KeepaliveCli(
     string _id,
     shared_ptr<Cli> _cli,
     shared_ptr<Executor> _parentExecutor,
-    shared_ptr<Timekeeper> _timekeeper,
+    shared_ptr<CliThreadWheelTimekeeper> _timekeeper,
     chrono::milliseconds _heartbeatInterval,
     string _keepAliveCommand,
     chrono::milliseconds _backoffAfterKeepaliveTimeout) {
@@ -111,9 +111,7 @@ void KeepaliveCli::triggerSendKeepAliveCommand(
         MLOG(MDEBUG) << "[" << params->id << "] (" << cmd << ") "
                      << "Creating sleep future";
         shared_ptr<CancelableWTCallback> cb =
-            std::static_pointer_cast<CliThreadWheelTimekeeper>(
-                params->timekeeper)
-                ->cancelableSleep(params->heartbeatInterval);
+            params->timekeeper->cancelableSleep(params->heartbeatInterval);
         params->setCurrentCallback(cb);
         return cb->getSemiFuture();
       })
@@ -128,14 +126,17 @@ void KeepaliveCli::triggerSendKeepAliveCommand(
         MLOG(MINFO) << "[" << params->id << "] (" << cmd << ") "
                     << "Got error running keepalive, backing off " << e.what();
 
-        //thrown by sleep - we terminate prematurely because we are in the destructor
+        // thrown by sleep - we terminate prematurely because we are in the
+        // destructor
         if (e.is_compatible_with<folly::FutureNoTimekeeper>()) {
-            return makeFuture(unit);
+          return makeFuture(unit);
         }
 
-        return futures::sleep(
-                   params->backoffAfterKeepaliveTimeout,
-                   params->timekeeper.get())
+        shared_ptr<CancelableWTCallback> cb =
+            params->timekeeper->cancelableSleep(
+                params->backoffAfterKeepaliveTimeout);
+        params->setCurrentCallback(cb);
+        return cb->getSemiFuture()
             .via(params->serialExecutorKeepAlive)
             .thenValue([params, cmd](auto) -> Unit {
               MLOG(MDEBUG) << "[" << params->id << "] (" << cmd << ") "

@@ -9,11 +9,11 @@
 
 #include <boost/thread/mutex.hpp>
 #include <devmand/channels/cli/Cli.h>
+#include <devmand/channels/cli/CliThreadWheelTimekeeper.h>
 #include <devmand/channels/cli/Command.h>
 #include <folly/Executor.h>
 #include <folly/executors/SerialExecutor.h>
 #include <folly/futures/Future.h>
-#include <folly/futures/ThreadWheelTimekeeper.h>
 
 namespace devmand {
 namespace channels {
@@ -23,6 +23,7 @@ using namespace std;
 using namespace folly;
 using boost::mutex;
 using devmand::channels::cli::Cli;
+using devmand::channels::cli::CliThreadWheelTimekeeper;
 using devmand::channels::cli::Command;
 
 class ReconnectingCli : public Cli {
@@ -31,7 +32,7 @@ class ReconnectingCli : public Cli {
       string id,
       shared_ptr<Executor> executor,
       function<SemiFuture<shared_ptr<Cli>>()>&& createCliStack,
-      shared_ptr<Timekeeper> timekeeper,
+      shared_ptr<CliThreadWheelTimekeeper> timekeeper,
       chrono::milliseconds quietPeriod);
 
   ~ReconnectingCli() override;
@@ -43,23 +44,22 @@ class ReconnectingCli : public Cli {
  private:
   struct ReconnectParameters {
     string id;
-
     atomic<bool> isReconnecting; // TODO: merge with maybeCli
-
     atomic<bool> shutdown;
-
     shared_ptr<Executor> executor;
-
     function<SemiFuture<shared_ptr<Cli>>()> createCliStack;
-
     mutex cliMutex;
-
     // guarded by mutex
     shared_ptr<Cli> maybeCli;
-
     std::chrono::milliseconds quietPeriod;
+    shared_ptr<CliThreadWheelTimekeeper> timekeeper;
+    shared_ptr<CancelableWTCallback> cb;
 
-    shared_ptr<Timekeeper> timekeeper;
+   public:
+    void setCurrentCallback(shared_ptr<CancelableWTCallback> _cb) {
+      boost::mutex::scoped_lock scoped_lock(this->cliMutex);
+      this->cb = _cb;
+    }
   };
 
   shared_ptr<ReconnectParameters> reconnectParameters;
@@ -68,7 +68,7 @@ class ReconnectingCli : public Cli {
       string id,
       shared_ptr<Executor> executor,
       function<SemiFuture<shared_ptr<Cli>>()>&& createCliStack,
-      shared_ptr<Timekeeper> timekeeper,
+      shared_ptr<CliThreadWheelTimekeeper> timekeeper,
       chrono::milliseconds quietPeriod);
 
   SemiFuture<string> executeSomething(

@@ -27,6 +27,7 @@ using namespace devmand::channels::cli;
 using namespace devmand::test::utils::cli;
 using namespace std;
 using namespace folly;
+using namespace std::chrono;
 
 class KeepaliveCliTest : public ::testing::Test {
  protected:
@@ -93,6 +94,21 @@ TEST_F(KeepaliveCliTest, cleanDestructOnError) {
   testedCli.reset();
 
   EXPECT_THROW(move(future).via(testExec.get()).get(10s), runtime_error);
+}
+
+TEST_F(KeepaliveCliTest, errorTimeoutAndThenDestroy) {
+  shared_ptr<AsyncCli> delegate = getMockCli<ErrCli>(0, testExec);
+  auto testedCli = getCli(delegate);
+
+  SemiFuture<string> future =
+      testedCli->executeRead(ReadCommand::create("returning"));
+
+  steady_clock::time_point begin = steady_clock::now();
+  // Destruct cli
+  testedCli.reset();
+  steady_clock::time_point end = steady_clock::now();
+
+  EXPECT_LT(duration_cast<milliseconds>(end - begin).count(), 3000);
 }
 
 TEST_F(KeepaliveCliTest, cleanDestructOnErrorWithDelay) {

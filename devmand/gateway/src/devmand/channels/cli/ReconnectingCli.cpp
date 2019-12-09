@@ -5,6 +5,8 @@
 // LICENSE file in the root directory of this source tree. An additional grant
 // of patent rights can be found in the PATENTS file in the same directory.
 
+#include <devmand/channels/cli/CancelableWTCallback.h>
+#include <devmand/channels/cli/CliThreadWheelTimekeeper.h>
 #include <devmand/channels/cli/ReconnectingCli.h>
 #include <magma_logging.h>
 
@@ -14,12 +16,14 @@ namespace cli {
 
 using namespace std;
 using namespace folly;
+using devmand::channels::cli::CancelableWTCallback;
+using devmand::channels::cli::CliThreadWheelTimekeeper;
 
 shared_ptr<ReconnectingCli> ReconnectingCli::make(
     string id,
     shared_ptr<Executor> executor,
     function<SemiFuture<shared_ptr<Cli>>()>&& createCliStack,
-    shared_ptr<Timekeeper> timekeeper,
+    shared_ptr<CliThreadWheelTimekeeper> timekeeper,
     chrono::milliseconds quietPeriod) {
   return shared_ptr<ReconnectingCli>(new ReconnectingCli(
       id, executor, move(createCliStack), move(timekeeper), move(quietPeriod)));
@@ -29,7 +33,7 @@ ReconnectingCli::ReconnectingCli(
     string id,
     shared_ptr<Executor> executor,
     function<SemiFuture<shared_ptr<Cli>>()>&& createCliStack,
-    shared_ptr<Timekeeper> timekeeper,
+    shared_ptr<CliThreadWheelTimekeeper> timekeeper,
     chrono::milliseconds quietPeriod) {
   reconnectParameters = make_shared<ReconnectParameters>();
   reconnectParameters->id = id;
@@ -54,6 +58,10 @@ ReconnectingCli::~ReconnectingCli() {
     MLOG(MDEBUG) << "[" << id << "] "
                  << "~RCli sleeping";
     std::this_thread::sleep_for(std::chrono::seconds(1));
+    if (reconnectParameters->cb.use_count() >= 1) {
+      reconnectParameters->cb->callbackCanceled();
+      reconnectParameters->cb.reset();
+    }
   }
 
   reconnectParameters = nullptr;
@@ -99,7 +107,10 @@ void ReconnectingCli::triggerReconnect(shared_ptr<ReconnectParameters> params) {
                        << "triggerReconnect started quiet period, got error : "
                        << e.what();
 
-          return futures::sleep(params->quietPeriod, params->timekeeper.get())
+          shared_ptr<CancelableWTCallback> cb =
+              params->timekeeper->cancelableSleep(params->quietPeriod);
+          params->setCurrentCallback(cb);
+          return cb->getSemiFuture()
               .via(params->executor.get())
               .thenValue([params](Unit) -> Future<Unit> {
                 MLOG(MDEBUG)
