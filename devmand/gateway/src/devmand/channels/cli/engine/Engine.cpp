@@ -82,7 +82,7 @@ Engine::~Engine() {
   MLOG(MDEBUG) << "Cli engine closed";
 }
 
-shared_ptr<folly::ThreadWheelTimekeeper> Engine::getTimekeeper() {
+shared_ptr<CliThreadWheelTimekeeper> Engine::getTimekeeper() {
   return timekeeper;
 }
 

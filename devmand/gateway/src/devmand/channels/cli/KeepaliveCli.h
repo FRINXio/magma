@@ -7,9 +7,10 @@
 
 #pragma once
 
-#include <boost/thread/mutex.hpp>
 #include <devmand/channels/cli/CancelableWTCallback.h>
 #include <devmand/channels/cli/Cli.h>
+#include <devmand/channels/cli/CliThreadWheelTimekeeper.h>
+#include <devmand/channels/cli/CliTimekeeperWrapper.h>
 #include <folly/Executor.h>
 #include <folly/executors/SerialExecutor.h>
 #include <folly/futures/Future.h>
@@ -18,6 +19,7 @@
 namespace devmand::channels::cli {
 using namespace std;
 using devmand::channels::cli::CancelableWTCallback;
+using devmand::channels::cli::CliTimekeeperWrapper;
 using devmand::channels::cli::Command;
 
 static constexpr chrono::seconds defaultKeepaliveInterval = chrono::seconds(60);
@@ -31,7 +33,7 @@ class KeepaliveCli : public Cli {
       string id,
       shared_ptr<Cli> _cli,
       shared_ptr<folly::Executor> parentExecutor,
-      shared_ptr<folly::Timekeeper> _timekeeper,
+      shared_ptr<CliThreadWheelTimekeeper> _timekeeper,
       chrono::milliseconds heartbeatInterval = defaultKeepaliveInterval,
       string keepAliveCommand = "",
       chrono::milliseconds backoffAfterKeepaliveTimeout = chrono::seconds(5));
@@ -46,22 +48,14 @@ class KeepaliveCli : public Cli {
   struct KeepaliveParameters {
     string id;
     shared_ptr<Cli> cli; // underlying cli layer
-    shared_ptr<folly::Timekeeper> timekeeper;
+    shared_ptr<CliTimekeeperWrapper> timekeeper;
     shared_ptr<folly::Executor> parentExecutor;
     folly::Executor::KeepAlive<folly::SerialExecutor> serialExecutorKeepAlive;
     string keepAliveCommand;
     chrono::milliseconds heartbeatInterval;
     chrono::milliseconds backoffAfterKeepaliveTimeout;
     atomic<bool> shutdown;
-    boost::mutex mutex;
-    shared_ptr<CancelableWTCallback> cb;
     KeepaliveParameters(KeepaliveParameters&&) = default;
-
-   public:
-    void setCurrentCallback(shared_ptr<CancelableWTCallback> _cb) {
-      boost::mutex::scoped_lock scoped_lock(this->mutex);
-      this->cb = _cb;
-    }
   };
 
   shared_ptr<KeepaliveParameters> keepaliveParameters;
@@ -70,7 +64,7 @@ class KeepaliveCli : public Cli {
       string id,
       shared_ptr<Cli> _cli,
       shared_ptr<folly::Executor> parentExecutor,
-      shared_ptr<folly::Timekeeper> _timekeeper,
+      shared_ptr<CliTimekeeperWrapper> _timekeeper,
       chrono::milliseconds heartbeatInterval,
       string keepAliveCommand,
       chrono::milliseconds backoffAfterKeepaliveTimeout);

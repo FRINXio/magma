@@ -7,8 +7,10 @@
 
 #pragma once
 
+#include <boost/thread/mutex.hpp>
 #include <devmand/channels/cli/CancelableWTCallback.h>
-#include <folly/futures/ThreadWheelTimekeeper.h>
+#include <devmand/channels/cli/CliThreadWheelTimekeeper.h>
+#include <folly/Unit.h>
 
 namespace devmand::channels::cli {
 
@@ -16,13 +18,28 @@ using devmand::channels::cli::CancelableWTCallback;
 using folly::Duration;
 using folly::Future;
 using folly::SemiFuture;
-using folly::ThreadWheelTimekeeper;
+using folly::Timekeeper;
 using folly::Unit;
+using folly::unit;
 using std::shared_ptr;
 
-class CliThreadWheelTimekeeper : public ThreadWheelTimekeeper {
+class CliTimekeeperWrapper : public Timekeeper {
+ private:
+  shared_ptr<CliThreadWheelTimekeeper> timekeeper;
+  boost::mutex mutex;
+  shared_ptr<CancelableWTCallback> cb;
+
  public:
-  shared_ptr<CancelableWTCallback> cancelableSleep(Duration);
+  CliTimekeeperWrapper(const shared_ptr<CliThreadWheelTimekeeper>& timekeeper);
+
+  ~CliTimekeeperWrapper();
+
+ public:
+  void cancelAll();
+
+  void setCurrentSleepCallback(shared_ptr<CancelableWTCallback> _cb);
+
+  Future<Unit> after(Duration dur) override;
 };
 
 } // namespace devmand::channels::cli

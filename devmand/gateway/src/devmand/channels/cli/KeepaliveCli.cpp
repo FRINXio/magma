@@ -7,6 +7,7 @@
 
 #include <devmand/channels/cli/CancelableWTCallback.h>
 #include <devmand/channels/cli/CliThreadWheelTimekeeper.h>
+#include <devmand/channels/cli/CliTimekeeperWrapper.h>
 #include <devmand/channels/cli/Command.h>
 #include <devmand/channels/cli/KeepaliveCli.h>
 #include <magma_logging.h>
@@ -14,6 +15,7 @@
 namespace devmand::channels::cli {
 
 using devmand::channels::cli::CancelableWTCallback;
+using devmand::channels::cli::CliTimekeeperWrapper;
 using devmand::channels::cli::Command;
 using namespace std;
 using namespace folly;
@@ -22,7 +24,7 @@ shared_ptr<KeepaliveCli> KeepaliveCli::make(
     string id,
     shared_ptr<Cli> cli,
     shared_ptr<folly::Executor> parentExecutor,
-    shared_ptr<folly::Timekeeper> timekeeper,
+    shared_ptr<CliThreadWheelTimekeeper> timekeeper,
     chrono::milliseconds heartbeatInterval,
     string keepAliveCommand,
     chrono::milliseconds backoffAfterKeepaliveTimeout) {
@@ -31,7 +33,7 @@ shared_ptr<KeepaliveCli> KeepaliveCli::make(
           id,
           cli,
           parentExecutor,
-          timekeeper,
+          make_shared<CliTimekeeperWrapper>(timekeeper),
           heartbeatInterval,
           move(keepAliveCommand),
           backoffAfterKeepaliveTimeout));
@@ -42,7 +44,7 @@ KeepaliveCli::KeepaliveCli(
     string _id,
     shared_ptr<Cli> _cli,
     shared_ptr<Executor> _parentExecutor,
-    shared_ptr<Timekeeper> _timekeeper,
+    shared_ptr<CliTimekeeperWrapper> _timekeeper,
     chrono::milliseconds _heartbeatInterval,
     string _keepAliveCommand,
     chrono::milliseconds _backoffAfterKeepaliveTimeout) {
@@ -57,9 +59,7 @@ KeepaliveCli::KeepaliveCli(
       /* keepAliveCommand */ move(_keepAliveCommand),
       /* heartbeatInterval */ _heartbeatInterval,
       /* backoffAfterKeepaliveTimeout */ _backoffAfterKeepaliveTimeout,
-      /* shutdown */ {false},
-      {},
-      {}});
+      /* shutdown */ {false}});
 
   MLOG(MDEBUG) << "[" << _id << "] "
                << "initialized";
@@ -77,10 +77,7 @@ KeepaliveCli::~KeepaliveCli() {
                  << "~KeepaliveCli sleeping";
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    if (keepaliveParameters->cb.use_count() >= 1) {
-      keepaliveParameters->cb->callbackCanceled();
-      keepaliveParameters->cb.reset();
-    }
+    keepaliveParameters->timekeeper->cancelAll();
   }
   keepaliveParameters = nullptr;
   MLOG(MDEBUG) << "[" << id << "] "
@@ -110,12 +107,8 @@ void KeepaliveCli::triggerSendKeepAliveCommand(
       .thenValue([params = keepaliveParameters, cmd](auto) -> SemiFuture<Unit> {
         MLOG(MDEBUG) << "[" << params->id << "] (" << cmd << ") "
                      << "Creating sleep future";
-        shared_ptr<CancelableWTCallback> cb =
-            std::static_pointer_cast<CliThreadWheelTimekeeper>(
-                params->timekeeper)
-                ->cancelableSleep(params->heartbeatInterval);
-        params->setCurrentCallback(cb);
-        return cb->getSemiFuture();
+        return futures::sleep(
+            params->heartbeatInterval, params->timekeeper.get());
       })
       .thenValue([keepaliveParameters, cmd](auto) -> Unit {
         MLOG(MDEBUG) << "[" << keepaliveParameters->id << "] (" << cmd << ") "
@@ -128,9 +121,10 @@ void KeepaliveCli::triggerSendKeepAliveCommand(
         MLOG(MINFO) << "[" << params->id << "] (" << cmd << ") "
                     << "Got error running keepalive, backing off " << e.what();
 
-        //thrown by sleep - we terminate prematurely because we are in the destructor
+        // thrown by sleep - we terminate prematurely because we are in the
+        // destructor
         if (e.is_compatible_with<folly::FutureNoTimekeeper>()) {
-            return makeFuture(unit);
+          return makeFuture(unit);
         }
 
         return futures::sleep(

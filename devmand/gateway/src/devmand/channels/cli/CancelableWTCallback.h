@@ -12,9 +12,9 @@
 
 using folly::EventBase;
 using folly::exception_wrapper;
+using folly::Future;
 using folly::FutureNoTimekeeper;
 using folly::Promise;
-using folly::SemiFuture;
 using folly::Unit;
 
 namespace devmand::channels::cli {
@@ -40,8 +40,8 @@ struct CancelableWTCallback
     return cob;
   }
 
-  SemiFuture<Unit> getSemiFuture() {
-    return promise_.getSemiFuture();
+  Future<Unit> getFuture() {
+    return promise_.getFuture();
   }
 
   FOLLY_NODISCARD Promise<Unit> stealPromise() {
