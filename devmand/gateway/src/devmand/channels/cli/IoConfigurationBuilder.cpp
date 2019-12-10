@@ -47,7 +47,7 @@ IoConfigurationBuilder::IoConfigurationBuilder(
       plaintextCliKv.at("username"),
       plaintextCliKv.at("password"),
       loadConfigValue(plaintextCliKv, "flavour", ""),
-      std::stoi(plaintextCliKv.at("port")),
+      folly::to<int>(plaintextCliKv.at("port")),
       toSeconds(loadConfigValue(
           plaintextCliKv, configKeepAliveIntervalSeconds, "60")),
       toSeconds(loadConfigValue(
@@ -76,7 +76,7 @@ shared_ptr<Cli> IoConfigurationBuilder::createAll(
 }
 
 chrono::seconds IoConfigurationBuilder::toSeconds(const string& value) {
-  return chrono::seconds(stoi(value));
+  return chrono::seconds(folly::to<int>(value));
 }
 
 shared_ptr<Cli> IoConfigurationBuilder::createAllUsingFactory(
@@ -173,8 +173,12 @@ Future<shared_ptr<Cli>> IoConfigurationBuilder::createPromptAwareCli(
           params->sshConnectionTimeout)
       .thenValue([params, session](auto) {
         // create CLI
-        shared_ptr<PromptAwareCli> cli =
-            PromptAwareCli::make(params->id, session, params->flavour, params->paExecutor, params->timekeeper);
+        shared_ptr<PromptAwareCli> cli = PromptAwareCli::make(
+            params->id,
+            session,
+            params->flavour,
+            params->paExecutor,
+            params->timekeeper);
         return configurePromptAwareCli(
             cli, session, params, params->paExecutor);
       });

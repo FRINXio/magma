@@ -45,8 +45,9 @@ Future<string> DefaultPromptResolver::resolvePrompt(
     shared_ptr<SessionAsync> session,
     const string& newline,
     shared_ptr<Timekeeper> timekeeper) {
-  return session->read().thenValue(
-      [=](...) { return resolvePrompt(session, newline, delayDelta, timekeeper); });
+  return session->read().thenValue([=](...) {
+    return resolvePrompt(session, newline, delayDelta, timekeeper);
+  });
 }
 
 Future<string> DefaultPromptResolver::resolvePrompt(
@@ -57,7 +58,8 @@ Future<string> DefaultPromptResolver::resolvePrompt(
   return resolvePromptAsync(session, newline, delay, timekeeper)
       .thenValue([=](Optional<string> prompt) {
         if (!prompt.hasValue()) {
-          return resolvePrompt(session, newline, delay + delayDelta, timekeeper);
+          return resolvePrompt(
+              session, newline, delay + delayDelta, timekeeper);
         } else {
           return folly::makeFuture(prompt.value());
         }
@@ -111,16 +113,14 @@ CliFlavour::CliFlavour(
       initializer(forward<unique_ptr<CliInitializer>>(_initializer)),
       newline(_newline) {}
 
-shared_ptr<CliFlavour> CliFlavour::create(
-    string flavour) {
+shared_ptr<CliFlavour> CliFlavour::create(string flavour) {
   if (flavour == UBIQUITI) {
     return make_shared<CliFlavour>(
         make_unique<DefaultPromptResolver>(),
         make_unique<UbiquitiInitializer>());
   } else {
     return make_shared<CliFlavour>(
-        make_unique<DefaultPromptResolver>(),
-        make_unique<EmptyInitializer>());
+        make_unique<DefaultPromptResolver>(), make_unique<EmptyInitializer>());
   }
 }
 

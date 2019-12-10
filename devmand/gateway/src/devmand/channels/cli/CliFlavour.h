@@ -13,9 +13,9 @@
 #include <memory>
 
 using devmand::channels::cli::sshsession::SessionAsync;
-using folly::Timekeeper;
 using folly::Future;
 using folly::SemiFuture;
+using folly::Timekeeper;
 using folly::Unit;
 using std::shared_ptr;
 using std::string;
@@ -92,8 +92,7 @@ class CliFlavour {
   shared_ptr<folly::Timekeeper> timekeeper;
 
  public:
-  static shared_ptr<CliFlavour> create(
-      string flavour);
+  static shared_ptr<CliFlavour> create(string flavour);
 
   std::unique_ptr<PromptResolver> resolver;
   std::unique_ptr<CliInitializer> initializer;
