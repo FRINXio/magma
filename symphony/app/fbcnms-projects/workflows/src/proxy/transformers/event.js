@@ -18,6 +18,8 @@ import {
 } from '../utils.js';
 
 import type {BeforeFun, Event, TransformerRegistrationFun} from '../../types';
+import {AfterFun} from "../../types";
+import {removeTenantPrefix} from "../utils";
 
 const logger = logging.getLogger(module);
 
@@ -87,6 +89,19 @@ const putEventBefore: BeforeFun = (
   proxyCallback({buffer: createProxyOptionsBuffer(reqObj, req)});
 };
 
+const getEventAfter: AfterFun = (tenantId, groups, req, respObj) => {
+  removeTenantPrefix(tenantId, respObj, '$[*].name', false);
+  let wfName = '';
+  for (const evnt of respObj) {
+    const split = evnt.event.split(':');
+    if (split.length === 3 && split[0] === 'conductor') {
+      wfName = {name: split[1]};
+      removeTenantPrefix(tenantId, wfName, '$.name', false);
+      evnt.event = `${split[0]}:${wfName.name}:${split[2]}`;
+    }
+  }
+};
+
 const registration: TransformerRegistrationFun = () => [
   {
     method: 'post',
@@ -97,6 +112,11 @@ const registration: TransformerRegistrationFun = () => [
     method: 'put',
     url: '/api/event',
     before: putEventBefore,
+  },
+  {
+    method: 'get',
+    url: '/api/event',
+    after: getEventAfter,
   },
 ];
 
